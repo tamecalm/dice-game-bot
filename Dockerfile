@@ -1,14 +1,15 @@
 # Step 1: Use an official Node.js image as the base
 FROM node:18
 
-# Step 2: Set the working directory to /src (since that's your root directory)
+# Step 2: Set the working directory to /app (this will be your root directory in the container)
 WORKDIR /app
 
 # Step 3: Copy package.json and package-lock.json to the working directory
+# This step allows npm to install dependencies without copying the entire application first.
 COPY package*.json ./
 
-# Step 4: Install dependencies
-RUN npm install
+# Step 4: Install dependencies without using the cache to ensure you're getting fresh packages
+RUN npm install --no-cache
 
 # Step 5: Copy the rest of the application code into the container
 COPY . .
