@@ -1,16 +1,18 @@
 const axios = require('axios');
 const User = require('../../models/User');
 const paystack = require('paystack-api')(process.env.PAYSTACK_SECRET_KEY);
-const rateLimit = require('telegraf-ratelimit');
+// const rateLimit = require('telegraf-ratelimit'); // Commented out for now
 const settings = require('../../config/settings');
 
 // Rate-limiting configuration
+/*
 const limitConfig = {
   window: 60000, // 1 minute
   limit: 3, // Max 3 requests per minute
   onLimitExceeded: (ctx) =>
     ctx.reply('You are sending too many requests. Please wait a moment and try again.'),
 };
+*/
 
 // State management for deposit process
 const userDepositState = {};
@@ -29,10 +31,9 @@ const getExchangeRates = async (baseCurrency) => {
 };
 
 module.exports = (bot) => {
-  // Apply rate-limiting middleware
-  bot.use(rateLimit(limitConfig));
+  // Apply rate-limiting middleware (commented out)
+  // bot.use(rateLimit(limitConfig));
 
-  // Handle /deposit command
   bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
@@ -60,7 +61,6 @@ module.exports = (bot) => {
     }
   });
 
-  // Handle text messages for deposit flow
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
 
