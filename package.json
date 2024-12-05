@@ -10,11 +10,12 @@
   "author": "Kehinde Ilesanmi",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.4.0",
+    "axios": "^1.7.9",
     "dotenv": "^16.3.1",
     "mongoose": "^7.6.0",
-    "paystack-api": "^1.0.2",
-    "telegraf": "^4.12.3"
+    "paystack-api": "^1.0.3",
+    "telegraf": "^4.12.3",
+    "tough-cookie": "^5.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
