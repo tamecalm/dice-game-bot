@@ -1,7 +1,7 @@
 // Bot Logics
 
 const { Telegraf } = require('telegraf');
-const settings = require('../config/settings');
+const settings = require('../../config/settings');
 const startCommand = require('./commands/start');
 const balanceCommand = require('./commands/balance');
 const depositCommand = require('./commands/deposit');
