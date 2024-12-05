@@ -2,7 +2,7 @@ require('dotenv').config();
 
 module.exports = {
   botToken: process.env.BOT_TOKEN,
-  dbUri: process.env.DB_URI,
+  dbUri: process.env.MONGO_URI,
   adminId: process.env.ADMIN_ID,
   defaultCurrency: 'NGN',
   minimumDeposit: 1000, // Naira equivalent
