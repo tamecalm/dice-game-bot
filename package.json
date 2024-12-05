@@ -4,8 +4,8 @@
   "description": "A Telegram bot for dice games with betting, deposit features, and admin panel.",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "start": "node src/config/app.js",
+    "dev": "nodemon src/config/app.js"
   },
   "author": "Kehinde Ilesanmi",
   "license": "MIT",
