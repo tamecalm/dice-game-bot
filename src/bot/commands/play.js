@@ -14,21 +14,20 @@ module.exports = async (ctx) => {
     return ctx.reply('You are not registered. Use /start to register.');
   }
 
-  // Check if user has a pending state
+  // Check if user is already in a game
   if (user.state === 'in-game') {
     return ctx.reply('You are already in a game. Please finish the current game first.');
   }
 
-  // Update user state to 'betting'
-  user.state = 'betting';
+  // Ask user to enter a bet amount
+  user.state = 'betting'; // Set state to 'betting'
   await user.save();
 
-  // Ask user to enter a bet amount
   ctx.reply(`Enter the amount you want to bet (min: ${settings.minBet}, max: ${settings.maxBet}):`);
 
-  // Wait for the next user message for the bet amount
-  ctx.telegram.on('message', async (messageCtx) => {
-    if (messageCtx.from.id !== telegramId) return; // Ensure it's the same user responding
+  // Listen for user response with a `hears` handler
+  ctx.bot.hears(/.*/, async (messageCtx) => {
+    if (messageCtx.from.id !== telegramId) return; // Ensure it's the same user
 
     const betAmount = parseFloat(messageCtx.message.text);
 
@@ -40,53 +39,53 @@ module.exports = async (ctx) => {
     }
 
     if (betAmount < settings.minBet) {
-      user.state = null; // Clear state
+      user.state = null;
       await user.save();
       return messageCtx.reply(`The minimum bet amount is ${settings.minBet}. Please enter a higher amount.`);
     }
 
     if (betAmount > settings.maxBet) {
-      user.state = null; // Clear state
+      user.state = null;
       await user.save();
       return messageCtx.reply(`The maximum bet amount is ${settings.maxBet}. Please enter a lower amount.`);
     }
 
-    const vatFee = parseFloat((betAmount * settings.vatRate) / 100).toFixed(2); // Calculate VAT
-    const totalBet = betAmount + parseFloat(vatFee); // Total amount to deduct
+    const vatFee = parseFloat((betAmount * settings.vatRate) / 100).toFixed(2);
+    const totalBet = betAmount + parseFloat(vatFee);
 
     if (totalBet > user.balance) {
-      user.state = null; // Clear state
+      user.state = null;
       await user.save();
       return messageCtx.reply(
         `Insufficient balance! Your current balance is ${user.balance}. Total required: ${totalBet}`
       );
     }
 
-    // Deduct total amount (including VAT) from user balance
+    // Deduct the bet amount from the user's balance
     user.balance -= totalBet;
-    user.state = 'in-game'; // Update user state to 'in-game'
-    user.currentBet = betAmount; // Save the bet amount
+    user.state = 'in-game';
+    user.currentBet = betAmount;
     await user.save();
 
     messageCtx.reply(
       `🎲 Your bet is placed! Bet: ${betAmount}, VAT: ${vatFee}. Remaining balance: ${user.balance}. Waiting for an opponent...`
     );
 
-    // Matchmake with another player
+    // Matchmaking logic
     const pair = joinQueue({ telegramId, username });
 
     if (!pair) {
       return messageCtx.reply('Waiting for another player...');
     }
 
-    // Dice rolling logic
+    // Dice roll and determine winner
     const [player1, player2] = pair;
     const player1Roll = diceRoll();
     const player2Roll = diceRoll();
 
     const winner = player1Roll > player2Roll ? player1 : player2;
 
-    // Update balances
+    // Update winner's balance
     const winnerUser = await User.findOne({ telegramId: winner.telegramId });
     if (winnerUser) {
       const winnings = player1Roll > player2Roll
@@ -96,17 +95,17 @@ module.exports = async (ctx) => {
       await winnerUser.save();
     }
 
-    // Notify players of results
+    // Notify both players of the result
     await ctx.telegram.sendMessage(player1.telegramId, `🎲 You rolled: ${player1Roll}`);
     await ctx.telegram.sendMessage(player2.telegramId, `🎲 You rolled: ${player2Roll}`);
 
-    // Declare winner
+    // Announce the winner
     await ctx.telegram.sendMessage(
       winner.telegramId,
       `🎉 You win! 🎲 Final roll: ${player1.username} (${player1Roll}) vs ${player2.username} (${player2Roll}). Winnings: ${player1Roll > player2Roll ? player2.currentBet : player1.currentBet}`
     );
 
-    // Clear states for both players
+    // Clear state for both players
     const loser = winner === player1 ? player2 : player1;
     const loserUser = await User.findOne({ telegramId: loser.telegramId });
     if (loserUser) {
