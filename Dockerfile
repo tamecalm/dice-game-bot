@@ -2,7 +2,7 @@
 FROM node:18
 
 # Step 2: Set the working directory to /src (since that's your root directory)
-WORKDIR /src/config
+WORKDIR /src
 
 # Step 3: Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
@@ -20,4 +20,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Step 8: Define the entry point (ensure the path reflects your file structure)
-CMD ["node", "app.js"]
+CMD ["node", "../config/app.js"]
