@@ -1,16 +1,18 @@
-// Start Logics
-
 const User = require('../../models/User');
 
 module.exports = async (ctx) => {
-  try {
-    // Check if ctx.from exists to avoid crashes
-    if (!ctx.from) {
-      return ctx.reply('An error occurred. Please try again.');
-    }
+  if (!ctx || typeof ctx.reply !== 'function') {
+    console.error('Invalid context object received.');
+    return;
+  }
 
-    const telegramId = ctx.from.id;
-    const username = ctx.from.username || 'Anonymous';
+  try {
+    const telegramId = ctx.from?.id;
+    const username = ctx.from?.username || 'Anonymous';
+
+    if (!telegramId) {
+      return ctx.reply('Could not identify your Telegram ID. Please try again.');
+    }
 
     let user = await User.findOne({ telegramId });
     if (!user) {
@@ -24,6 +26,8 @@ module.exports = async (ctx) => {
     await ctx.reply('Use /deposit to add funds, /play to find a match, and /balance to check your balance.');
   } catch (error) {
     console.error('Error in start command:', error.message);
-    ctx.reply('An unexpected error occurred. Please try again later.');
+    if (ctx && typeof ctx.reply === 'function') {
+      ctx.reply('An unexpected error occurred. Please try again later.');
+    }
   }
 };
