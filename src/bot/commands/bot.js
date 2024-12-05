@@ -3,10 +3,10 @@
 const { Telegraf } = require('telegraf');
 const settings = require('../../config/settings');
 const startCommand = require('./start');
-const balanceCommand = require('./commands/balance');
-const depositCommand = require('./commands/deposit');
-const playCommand = require('./commands/play');
-const adminCommand = require('./commands/admin');
+const balanceCommand = require('./balance');
+const depositCommand = require('./deposit');
+const playCommand = require('./play');
+const adminCommand = require('./admin');
 
 const bot = new Telegraf(settings.botToken);
 
