@@ -2,7 +2,7 @@
   "name": "dice-game-bot",
   "version": "1.0.0",
   "description": "A Telegram bot for dice games with betting, deposit features, and admin panel.",
-  "main": "src/app.js",
+  "main": "src/config/app.js",
   "scripts": {
     "start": "node src/config/app.js",
     "dev": "nodemon src/config/app.js"
