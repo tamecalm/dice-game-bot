@@ -20,4 +20,4 @@ EXPOSE 3000
 ENV NODE_ENV=production
 
 # Step 8: Define the entry point
-CMD ["node", "config/app.js"]
+CMD ["node", "config/app"]
