@@ -2,7 +2,7 @@
 const express = require('express');
 const bot = require('../bot/commands/bot');
 const connectDb = require('./config/db');
-const settings = require('../../config/settings');
+const settings = require('/app/src/config/settings');
 const paystackWebhook = require('./webhook/paystack');
 
 // Initialize the Express app
