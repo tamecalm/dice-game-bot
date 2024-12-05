@@ -2,7 +2,7 @@
 
 const { Telegraf } = require('telegraf');
 const settings = require('../../config/settings');
-const startCommand = require('./commands/start');
+const startCommand = require('../../../commands/start');
 const balanceCommand = require('./commands/balance');
 const depositCommand = require('./commands/deposit');
 const playCommand = require('./commands/play');
