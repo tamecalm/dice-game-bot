@@ -25,9 +25,10 @@ module.exports = async (ctx) => {
 
   ctx.reply(`Enter the amount you want to bet (min: ${settings.minBet}, max: ${settings.maxBet}):`);
 
-  // Listen for user response with a `hears` handler
-  ctx.bot.hears(/.*/, async (messageCtx) => {
-    if (messageCtx.from.id !== telegramId) return; // Ensure it's the same user
+  // Use `on` to listen for user responses
+  const onMessage = async (messageCtx) => {
+    // Ensure it's the same user
+    if (messageCtx.from.id !== telegramId) return;
 
     const betAmount = parseFloat(messageCtx.message.text);
 
@@ -35,19 +36,25 @@ module.exports = async (ctx) => {
     if (isNaN(betAmount)) {
       user.state = null; // Clear state
       await user.save();
-      return messageCtx.reply('Invalid amount. Please enter a valid number.');
+      messageCtx.reply('Invalid amount. Please enter a valid number.');
+      ctx.bot.off('text', onMessage); // Stop listening
+      return;
     }
 
     if (betAmount < settings.minBet) {
       user.state = null;
       await user.save();
-      return messageCtx.reply(`The minimum bet amount is ${settings.minBet}. Please enter a higher amount.`);
+      messageCtx.reply(`The minimum bet amount is ${settings.minBet}. Please enter a higher amount.`);
+      ctx.bot.off('text', onMessage); // Stop listening
+      return;
     }
 
     if (betAmount > settings.maxBet) {
       user.state = null;
       await user.save();
-      return messageCtx.reply(`The maximum bet amount is ${settings.maxBet}. Please enter a lower amount.`);
+      messageCtx.reply(`The maximum bet amount is ${settings.maxBet}. Please enter a lower amount.`);
+      ctx.bot.off('text', onMessage); // Stop listening
+      return;
     }
 
     const vatFee = parseFloat((betAmount * settings.vatRate) / 100).toFixed(2);
@@ -56,9 +63,11 @@ module.exports = async (ctx) => {
     if (totalBet > user.balance) {
       user.state = null;
       await user.save();
-      return messageCtx.reply(
+      messageCtx.reply(
         `Insufficient balance! Your current balance is ${user.balance}. Total required: ${totalBet}`
       );
+      ctx.bot.off('text', onMessage); // Stop listening
+      return;
     }
 
     // Deduct the bet amount from the user's balance
@@ -75,7 +84,9 @@ module.exports = async (ctx) => {
     const pair = joinQueue({ telegramId, username });
 
     if (!pair) {
-      return messageCtx.reply('Waiting for another player...');
+      messageCtx.reply('Waiting for another player...');
+      ctx.bot.off('text', onMessage); // Stop listening
+      return;
     }
 
     // Dice roll and determine winner
@@ -120,5 +131,8 @@ module.exports = async (ctx) => {
 
     leaveQueue(player1);
     leaveQueue(player2);
-  });
+    ctx.bot.off('text', onMessage); // Stop listening after game ends
+  };
+
+  ctx.bot.on('text', onMessage); // Listen for text messages
 };
