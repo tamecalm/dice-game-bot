@@ -18,7 +18,9 @@ const userDepositState = {};
 // Helper: Fetch exchange rates
 const getExchangeRates = async (baseCurrency) => {
   try {
-    const response = await axios.get(`https://v6.exchangerate-api.com/v6/caadc6a03dcb054f3906bd95/latest/${baseCurrency}`);
+    const response = await axios.get(
+      `https://v6.exchangerate-api.com/v6/caadc6a03dcb054f3906bd95/latest/${baseCurrency}`
+    );
     return response.data.rates;
   } catch (error) {
     console.error('Error fetching exchange rates:', error);
@@ -27,20 +29,24 @@ const getExchangeRates = async (baseCurrency) => {
 };
 
 module.exports = (bot) => {
-  // Apply rate limiting
+  // Apply rate limiting middleware
   bot.use(rateLimit(limitConfig));
 
   bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
-    // Check if user exists
+    // Check if user exists in the database
     const user = await User.findOne({ telegramId: userId });
     if (!user) {
       return ctx.reply('You are not registered. Use /start to register.');
     }
 
     // Reset user's deposit state
-    userDepositState[userId] = { step: 1, amount: null, currency: user.currency || settings.defaultCurrency };
+    userDepositState[userId] = {
+      step: 1,
+      amount: null,
+      currency: user.currency || settings.defaultCurrency,
+    };
 
     return ctx.reply(
       `Welcome to the deposit process! Please enter the amount you'd like to deposit.\n` +
@@ -104,10 +110,10 @@ module.exports = (bot) => {
         try {
           // Initialize payment with Paystack
           const transaction = await paystack.transaction.initialize({
-            email: `${userId}@example.com`, // Use user's email in a real-world case
+            email: `${userId}@example.com`, // Replace with user's email in production
             amount: state.totalAmount * 100, // Convert to smallest currency unit
             currency: state.currency,
-            callback_url: `${process.env.PAYSTACK_CALLBACK_URL}`, // Define in your .env
+            callback_url: `${process.env.PAYSTACK_CALLBACK_URL}`, // Ensure this is defined
             metadata: {
               userId,
               amount: state.amount,
