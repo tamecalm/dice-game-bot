@@ -2,7 +2,7 @@
 FROM node:18
 
 # Step 2: Set the working directory to /src (since that's your root directory)
-WORKDIR /src
+WORKDIR /src/config
 
 # Step 3: Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
