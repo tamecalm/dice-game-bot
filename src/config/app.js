@@ -1,7 +1,7 @@
 // Import dependencies
 const express = require('express');
 const bot = require('../bot/commands/bot');
-const connectDb = require('./config/db');
+const connectDb = require('../config/db');
 const settings = require('../config/settings');
 const paystackWebhook = require('./webhook/paystack');
 
