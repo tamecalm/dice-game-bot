@@ -23,7 +23,7 @@ module.exports = async (ctx) => {
     // Find the user in the database or create a new one
     let user = await User.findOne({ telegramId });
     let welcomeMessage;
-    let keyboard;
+    let keyboardButtons;
 
     if (!user) {
       user = new User({ telegramId, username });
@@ -42,13 +42,11 @@ Here's what you can do:
 👥 **Refer Friends**  
 🏦 **Withdraw Your Winnings**`;
 
-      keyboard = Markup.keyboard([
+      keyboardButtons = [
         ['💰 Deposit', '🎮 Play'],
         ['📊 Balance', '🏦 Withdrawal'],
         ['👥 Referral'],
-      ])
-        .resize()
-        .oneTime(false);
+      ];
     } else {
       console.log(`Returning user: ${username} (ID: ${telegramId})`);
 
@@ -63,13 +61,11 @@ Ready to roll the dice and win big? Here's what you can do:
 👥 **Refer Friends for Rewards**  
 🏦 **Withdraw Your Winnings**`;
 
-      keyboard = Markup.keyboard([
+      keyboardButtons = [
         ['🎮 Play', '💰 Deposit'],
         ['📊 Balance', '🏦 Withdrawal'],
         ['👥 Referral'],
-      ])
-        .resize()
-        .oneTime(false);
+      ];
     }
 
     // Add admin options if the user is an admin
@@ -79,13 +75,11 @@ Ready to roll the dice and win big? Here's what you can do:
 🛠 **Admin Panel**  
 Manage and monitor your bot with admin tools.`;
 
-      keyboard = keyboard.resize().keyboard([
-        ...keyboard.reply_markup.keyboard,
-        ['🛠 Admin Panel'],
-      ]);
+      keyboardButtons.push(['🛠 Admin Panel']);
     }
 
-    // Send the welcome message with keyboard buttons
+    // Create the keyboard and send the welcome message
+    const keyboard = Markup.keyboard(keyboardButtons).resize();
     await ctx.replyWithMarkdown(welcomeMessage, keyboard);
   } catch (error) {
     console.error('Error in start command:', error.message);
