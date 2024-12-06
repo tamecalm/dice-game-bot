@@ -9,8 +9,8 @@ const adminCommand = require('./admin');
 // Initialize the bot with 'new' since Telegraf is a class in version 3.x
 const bot = new Telegraf(settings.botToken);
 
-// Register commands properly
-bot.start((ctx) => startCommand(ctx)); // Register /start command
+// Register commands properly using .command() in v3.x
+bot.command('start', (ctx) => startCommand(ctx)); // Register /start command
 bot.command('balance', (ctx) => balanceCommand(ctx)); // Register /balance command
 bot.command('deposit', (ctx) => depositCommand(ctx)); // Register /deposit command
 bot.command('play', (ctx) => playCommand(ctx)); // Register /play command
@@ -22,4 +22,3 @@ bot.on('text', (ctx) => {
 });
 
 module.exports = bot;
-
