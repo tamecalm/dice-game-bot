@@ -6,7 +6,7 @@ const settings = require('../../config/settings');
 module.exports = async (ctx) => {
   try {
     // Check if the user is the admin
-    const adminId = settings.adminId;
+    const adminId = settings.adminIds;
     if (ctx.from.id.toString() !== adminId) {
       return ctx.replyWithHTML('❌ <b>Unauthorized access.</b>');
     }
