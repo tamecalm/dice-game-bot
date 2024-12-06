@@ -1,6 +1,6 @@
 // Import dependencies
 const express = require('express');
-const bot = require('../bot/commands/bot'); // Importing bot instance from the existing file
+const bot = require('../bot/commands/bot');  // Importing bot instance from the existing file
 const connectDb = require('./db');
 const settings = require('./settings');
 const paystackWebhook = require('../webhook/paystack');
@@ -21,13 +21,9 @@ app.use('/webhook', paystackWebhook);
     await connectDb();
     console.log('📦 Database connected successfully.');
 
-    // Ensure the bot is launched properly
-    if (bot.launch) {
-      bot.launch();  // Launch the bot if it has a launch method
-      console.log('🤖 Bot is up and running.');
-    } else {
-      console.error('❌ Bot does not have a launch method!');
-    }
+    // Launch the bot
+    bot.launch();  // This should now work because 'bot' has been initialized and exported
+    console.log('🤖 Bot is up and running.');
 
   } catch (error) {
     // Log any error during the startup process
