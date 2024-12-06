@@ -8,9 +8,6 @@ module.exports = async (ctx) => {
       return;
     }
 
-    // Log the full context for debugging purposes (optional, remove in production)
-    console.log('Received context:', ctx);
-
     // Validate ctx.from and extract Telegram user details
     const telegramId = ctx.from?.id;
     const username = ctx.from?.username || 'Anonymous';

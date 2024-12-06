@@ -20,7 +20,6 @@ const getExchangeRates = async (baseCurrency) => {
 };
 
 module.exports = (bot) => {
-  // Ensure bot is passed correctly and register command handlers
   bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
@@ -132,7 +131,6 @@ module.exports = (bot) => {
       }
     } catch (error) {
       console.error('Error during deposit process:', error.message);
-
       delete userDepositState[userId];
       return ctx.reply('An error occurred. Please restart the deposit process.');
     }
