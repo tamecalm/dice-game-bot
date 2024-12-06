@@ -2,32 +2,23 @@ const { Telegraf } = require('telegraf'); // Ensure you import correctly
 const settings = require('../../config/settings');
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
-const depositCommand = require('./deposit');
+const depositCommand = require('./deposit'); // Ensure deposit.js uses bot instance
 const playCommand = require('./play');
 const adminCommand = require('./admin');
 
 // Initialize bot using 'new'
 const bot = new Telegraf(settings.botToken);
 
-// Handle specific commands
-bot.on('text', (ctx) => {
-  const text = ctx.message.text;
+// Attach command handlers
+startCommand(bot);
+balanceCommand(bot);
+depositCommand(bot); // Pass bot instance to deposit.js
+playCommand(bot);
+adminCommand(bot);
 
-  // Check for specific commands and handle accordingly
-  if (text === '/start') {
-    startCommand(ctx);
-  } else if (text === '/balance') {
-    balanceCommand(ctx);
-  } else if (text === '/deposit') {
-    depositCommand(ctx);
-  } else if (text === '/play') {
-    playCommand(ctx); // Pass bot as argument to playCommand
-  } else if (text === '/admin') {
-    adminCommand(ctx);
-  } else {
-    // Handle unknown commands
-    ctx.reply('Unknown command. Use /start to begin.');
-  }
+// Handle unknown commands or generic text
+bot.on('text', (ctx) => {
+  ctx.reply('Unknown command. Use /start to begin.');
 });
 
 // Export the bot instance
