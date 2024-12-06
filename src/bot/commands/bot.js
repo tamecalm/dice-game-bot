@@ -8,12 +8,12 @@ const adminCommand = require('./admin');
 
 const bot = new Telegraf(settings.botToken);
 
-// Inject bot into commands that need it
-startCommand(bot);
-balanceCommand(bot);
-depositCommand(bot);
-playCommand(bot);
-adminCommand(bot);
+// Register commands properly
+bot.start((ctx) => startCommand(ctx)); // Register /start command
+bot.command('balance', (ctx) => balanceCommand(ctx)); // Register /balance command
+bot.command('deposit', (ctx) => depositCommand(ctx)); // Register /deposit command
+bot.command('play', (ctx) => playCommand(ctx)); // Register /play command
+bot.command('admin', (ctx) => adminCommand(ctx)); // Register /admin command
 
 // Handle unknown commands
 bot.on('text', (ctx) => {
