@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf');
+const { Telegraf } = require('telegraf'); // Import as a function
 const settings = require('../../config/settings');
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
@@ -6,7 +6,8 @@ const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
 
-const bot = new Telegraf(settings.botToken);
+// Initialize the bot using the imported function
+const bot = Telegraf(settings.botToken); // Use as a function, not a constructor
 
 // Register commands properly
 bot.start(async (ctx) => await startCommand(ctx)); // Register /start command
