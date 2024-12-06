@@ -22,7 +22,7 @@ module.exports = async (ctx) => {
     // Find the user in the database or create a new one
     let user = await User.findOne({ telegramId });
     let welcomeMessage;
-    let buttons;
+    let keyboard;
 
     if (!user) {
       user = new User({ telegramId, username });
@@ -32,22 +32,22 @@ module.exports = async (ctx) => {
       welcomeMessage = `
 🎲 **Welcome to Bet The Dice!** 🎲
 
-👋 Hi, **${username}**, you've been successfully registered. 
+👋 Hi, **${username}**, you've been successfully registered.  
 
 Here's what you can do:
-💰 **/deposit** - Add funds to your account  
-🎮 **/play** - Find an opponent to start betting  
-📊 **/balance** - Check your account balance  
-👥 **/referral** - Invite friends and earn rewards  
-🏦 **/withdrawal** - Withdraw your winnings`;
+💰 **Deposit Funds**  
+🎮 **Play and Bet**  
+📊 **Check Your Balance**  
+👥 **Refer Friends**  
+🏦 **Withdraw Your Winnings**`;
 
-      buttons = Markup.inlineKeyboard([
-        [Markup.button.callback('💰 Deposit', 'deposit')],
-        [Markup.button.callback('🎮 Play Now', 'play')],
-        [Markup.button.callback('📊 Check Balance', 'balance')],
-        [Markup.button.callback('🏦 Withdraw Funds', 'withdrawal')],
-        [Markup.button.callback('👥 Referral', 'referral')],
-      ]);
+      keyboard = Markup.keyboard([
+        ['💰 Deposit', '🎮 Play'],
+        ['📊 Balance', '🏦 Withdrawal'],
+        ['👥 Referral'],
+      ])
+        .resize()
+        .oneTime(false);
     } else {
       console.log(`Returning user: ${username} (ID: ${telegramId})`);
 
@@ -55,28 +55,24 @@ Here's what you can do:
 🎲 **Welcome Back to Bet The Dice!** 🎲
 
 👋 Hello again, **${username}**!  
-Ready to continue betting and winning? Here's what you can do:
-💰 **/deposit** - Add more funds to your account  
-🎮 **/play** - Find an opponent to roll the dice  
-📊 **/balance** - View your current balance  
-👥 **/referral** - Earn rewards by inviting friends  
-🏦 **/withdrawal** - Withdraw your winnings`;
+Ready to roll the dice and win big? Here's what you can do:
+💰 **Deposit More Funds**  
+🎮 **Find an Opponent and Play**  
+📊 **View Your Current Balance**  
+👥 **Refer Friends for Rewards**  
+🏦 **Withdraw Your Winnings**`;
 
-      buttons = Markup.inlineKeyboard([
-        [Markup.button.callback('🎮 Play Now', 'play')],
-        [Markup.button.callback('💰 Deposit Funds', 'deposit')],
-        [Markup.button.callback('📊 View Balance', 'balance')],
-        [Markup.button.callback('🏦 Withdraw Funds', 'withdrawal')],
-      ]);
+      keyboard = Markup.keyboard([
+        ['🎮 Play', '💰 Deposit'],
+        ['📊 Balance', '🏦 Withdrawal'],
+        ['👥 Referral'],
+      ])
+        .resize()
+        .oneTime(false);
     }
 
-    // Send the welcome message with inline buttons
-    await ctx.replyWithMarkdown(welcomeMessage, buttons);
-
-    // Follow-up with a motivational note
-    await ctx.replyWithMarkdown(
-      `✨ *Pro Tip*: Invite friends using your referral link to boost your balance and get milestone bonuses! 🎉`
-    );
+    // Send the welcome message with keyboard buttons
+    await ctx.replyWithMarkdown(welcomeMessage, keyboard);
   } catch (error) {
     console.error('Error in start command:', error.message);
 
