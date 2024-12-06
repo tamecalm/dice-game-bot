@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf'); // Correct import for Telegraf v4.x
+const { Telegraf } = require('telegraf'); // Ensure you import correctly
 const settings = require('../../config/settings');
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
@@ -6,7 +6,7 @@ const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
 
-// Initialize the bot correctly using 'new' since Telegraf is a class
+// Initialize bot using 'new'
 const bot = new Telegraf(settings.botToken);
 
 // Handle specific commands
@@ -21,7 +21,7 @@ bot.on('text', (ctx) => {
   } else if (text === '/deposit') {
     depositCommand(ctx);
   } else if (text === '/play') {
-    playCommand(ctx);
+    playCommand(bot)(ctx); // Pass bot as argument to playCommand
   } else if (text === '/admin') {
     adminCommand(ctx);
   } else {
@@ -30,4 +30,4 @@ bot.on('text', (ctx) => {
   }
 });
 
-module.exports = bot;
+// bot.launch(); // Launch the bot
