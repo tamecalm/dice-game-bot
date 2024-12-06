@@ -1,4 +1,4 @@
-const Telegraf = require('telegraf'); // Import Telegraf properly
+const { Telegraf } = require('telegraf'); // Import Telegraf correctly for v4.x
 const settings = require('../../config/settings');
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
@@ -6,8 +6,8 @@ const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
 
-// Initialize the bot with 'new' since Telegraf is a class in version 3.x
-const bot = new Telegraf(settings.botToken);
+// Initialize the bot as a function
+const bot = Telegraf(settings.botToken); // No need for `new` in v4.x
 
 // Handle specific commands
 bot.on('text', (ctx) => {
