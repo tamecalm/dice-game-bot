@@ -1,6 +1,6 @@
 // Import dependencies
 const express = require('express');
-const { Telegraf } = require('telegraf');  // Ensure correct import
+const bot = require('../bot/commands/bot');
 const connectDb = require('./db');
 const settings = require('./settings');
 const paystackWebhook = require('../webhook/paystack');
@@ -21,25 +21,13 @@ app.use('/webhook', paystackWebhook);
     await connectDb();
     console.log('📦 Database connected successfully.');
 
-    // Initialize the bot properly
-    const bot = new Telegraf(settings.botToken);
-    console.log('Bot instance created:', bot);  // Log bot instance
-
-    // Adding a log before launching the bot
-    console.log('🚀 Attempting to launch the bot...');
-    
-    // Launch the bot inside a try-catch to catch launch-related errors
-    try {
-      await bot.launch(); // Launch the bot
-      console.log('🤖 Bot is up and running.');
-    } catch (launchError) {
-      console.error('❌ Error during bot launch:', launchError);
-      throw launchError; // Re-throw to ensure error is logged correctly
-    }
+    // Launch the bot
+    bot.launch();
+    console.log('🤖 Bot is up and running.');
 
   } catch (error) {
     // Log any error during the startup process
-    console.error('❌ Error connecting to the database or launching the bot:', error);
+    console.error('❌ Error launching the bot:', error);
     process.exit(1);
   }
 })();
