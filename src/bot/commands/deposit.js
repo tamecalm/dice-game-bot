@@ -1,7 +1,6 @@
 const axios = require('axios');
 const User = require('../../models/User');
 const paystack = require('paystack-api')(process.env.PAYSTACK_SECRET_KEY);
-// const rateLimit = require('telegraf-ratelimit'); // Commented out for now
 const settings = require('../../config/settings');
 
 // Rate-limiting configuration
@@ -34,7 +33,8 @@ module.exports = (bot) => {
   // Apply rate-limiting middleware (commented out)
   // bot.use(rateLimit(limitConfig));
 
-  bot.on('deposit', async (ctx) => {
+  // Listen for the /deposit command
+  bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
     try {
@@ -61,6 +61,7 @@ module.exports = (bot) => {
     }
   });
 
+  // Listen for any text input during the deposit process
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
 
