@@ -38,7 +38,7 @@ module.exports = (bot) => {
             user.state = null; // Clear state
             await user.save();
             messageCtx.reply('❌ Invalid amount. Please enter a valid number.');
-            bot.off('text', onMessage);
+            bot.off('message', onMessage);
             return;
           }
 
@@ -46,7 +46,7 @@ module.exports = (bot) => {
             user.state = null;
             await user.save();
             messageCtx.reply(`❌ Minimum bet is ${settings.minBet}. Enter a higher amount.`);
-            bot.off('text', onMessage);
+            bot.off('message', onMessage);
             return;
           }
 
@@ -54,7 +54,7 @@ module.exports = (bot) => {
             user.state = null;
             await user.save();
             messageCtx.reply(`❌ Maximum bet is ${settings.maxBet}. Enter a lower amount.`);
-            bot.off('text', onMessage);
+            bot.off('message', onMessage);
             return;
           }
 
@@ -67,7 +67,7 @@ module.exports = (bot) => {
             messageCtx.reply(
               `❌ Insufficient balance! Your balance: ${user.balance}. Total needed: ${totalBet}.`
             );
-            bot.off('text', onMessage);
+            bot.off('message', onMessage);
             return;
           }
 
@@ -85,7 +85,7 @@ module.exports = (bot) => {
           const pair = joinQueue({ telegramId, username });
           if (!pair) {
             messageCtx.reply('⏳ Waiting for another player...');
-            bot.off('text', onMessage);
+            bot.off('message', onMessage);
             setTimeout(async () => {
               if (user.state === 'in-game') {
                 user.state = null;
@@ -138,15 +138,15 @@ module.exports = (bot) => {
 
           leaveQueue(player1);
           leaveQueue(player2);
-          bot.off('text', onMessage);
+          bot.off('message', onMessage);
         } catch (error) {
           console.error('Error during game:', error.message);
           messageCtx.reply('❌ An error occurred. Please try again later.');
-          bot.off('text', onMessage);
+          bot.off('message', onMessage);
         }
       };
 
-      bot.on('text', onMessage); // Listen for user input
+      bot.on('message', onMessage); // Listen for user input
     } catch (error) {
       console.error('Error in play command:', error.message);
       ctx.reply('❌ An unexpected error occurred. Please try again.');
