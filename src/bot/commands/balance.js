@@ -2,25 +2,37 @@ const User = require('../../models/User');
 
 module.exports = async (ctx) => {
   try {
-    if (!ctx || !ctx.from) {
+    // Ensure the context is valid
+    if (!ctx?.from) {
       console.error('Invalid or undefined ctx.from:', ctx);
-      return ctx.reply
-        ? ctx.reply('An error occurred. Please try again later.')
-        : console.error('ctx.reply is not available');
+      return ctx.replyWithHTML(
+        '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
+      );
     }
 
     const telegramId = ctx.from.id;
 
+    // Find user by Telegram ID
     const user = await User.findOne({ telegramId });
     if (!user) {
-      return ctx.reply('You are not registered. Use /start to register.');
+      return ctx.replyWithHTML(
+        '❌ <b>You are not registered.</b>\nUse <code>/start</code> to register and create an account.'
+      );
     }
 
-    return ctx.reply(`💰 Your balance: ${user.balance.toFixed(2)} ${user.currency}`);
+    // Respond with user's balance
+    return ctx.replyWithHTML(
+      `💰 <b>Your Balance:</b> ${user.balance.toFixed(2)} ${user.currency}\n\n` +
+      `🔄 <i>Need to top up? Use the /deposit command.</i>`
+    );
   } catch (error) {
     console.error('Error in balance command:', error.message);
+
+    // Handle unexpected errors
     if (ctx && typeof ctx.reply === 'function') {
-      ctx.reply('An unexpected error occurred. Please try again later.');
+      ctx.replyWithHTML(
+        '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
+      );
     }
   }
 };

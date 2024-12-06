@@ -1,24 +1,40 @@
-const { Telegraf } = require('telegraf'); // Ensure you import correctly
+const { Telegraf } = require('telegraf');
 const settings = require('../../config/settings');
+
+// Import command handlers
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
-const depositCommand = require('./deposit'); // Ensure deposit.js uses ctx, not bot
+const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
+const withdrawalCommand = require('./withdrawal'); // New: withdrawal logic
+const referralCommand = require('./referral');     // New: referral logic
 
-// Initialize bot using 'new'
+// Initialize the bot
 const bot = new Telegraf(settings.botToken);
 
-// Attach command handlers directly to bot
+// Register command handlers
 bot.command('start', startCommand);
 bot.command('balance', balanceCommand);
 bot.command('deposit', depositCommand);
 bot.command('play', playCommand);
+bot.command('withdrawal', withdrawalCommand); // Register withdrawal command
+bot.command('referral', referralCommand);     // Register referral command
 bot.command('admin', adminCommand);
 
-// Handle unknown commands or generic text
+// Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
-  ctx.reply('Unknown command. Use /start to begin.');
+  ctx.replyWithHTML(
+    '❌ <b>Unknown command.</b>\nUse <code>/start</code> to see available commands.'
+  );
+});
+
+// Global error handler (optional but recommended)
+bot.catch((err, ctx) => {
+  console.error(`Bot error for ${ctx.updateType}:`, err.message);
+  ctx.replyWithHTML(
+    '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
+  );
 });
 
 // Export the bot instance

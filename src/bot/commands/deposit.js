@@ -19,38 +19,39 @@ const getExchangeRates = async (baseCurrency) => {
   }
 };
 
+// Command handler
 module.exports = (bot) => {
-  bot.on('text', async (ctx) => {
+  bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
-    // Handle /deposit command
-    if (ctx.message.text === '/deposit') {
-      try {
-        // Check if user exists
-        const user = await User.findOne({ telegramId: userId });
-        if (!user) {
-          return ctx.reply('You are not registered. Use /start to register.');
-        }
-
-        // Initialize deposit state
-        userDepositState[userId] = {
-          step: 1,
-          amount: null,
-          currency: user.currency || settings.defaultCurrency,
-        };
-
-        return ctx.reply(
-          `Welcome to the deposit process! Please enter the amount you'd like to deposit.\n` +
-          `Note: Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
-        );
-      } catch (error) {
-        console.error('Error handling /deposit command:', error.message);
-        return ctx.reply('An error occurred while starting the deposit process. Please try again later.');
+    try {
+      // Fetch user data
+      const user = await User.findOne({ telegramId: userId });
+      if (!user) {
+        return ctx.reply('❌ You are not registered. Use /start to register.');
       }
-    }
 
-    // Exit if user is not in the deposit process
-    if (!userDepositState[userId]) return;
+      // Initialize deposit state
+      userDepositState[userId] = {
+        step: 1,
+        amount: null,
+        currency: user.currency || settings.defaultCurrency,
+      };
+
+      return ctx.reply(
+        `💳 Welcome to the deposit process!\n` +
+          `Please enter the amount you'd like to deposit.\n` +
+          `Note: Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
+      );
+    } catch (error) {
+      console.error('Error initiating deposit process:', error.message);
+      return ctx.reply('❌ An error occurred while starting the deposit process. Please try again later.');
+    }
+  });
+
+  bot.on('text', async (ctx) => {
+    const userId = ctx.from.id;
+    if (!userDepositState[userId]) return; // Exit if user is not in deposit flow
 
     const userInput = ctx.message.text;
     const state = userDepositState[userId];
@@ -62,14 +63,14 @@ module.exports = (bot) => {
           const amount = parseFloat(userInput);
           if (isNaN(amount) || amount < settings.minimumDeposit) {
             return ctx.reply(
-              `Invalid amount. Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
+              `❌ Invalid amount. Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
             );
           }
 
           // Fetch exchange rates
           const exchangeRates = await getExchangeRates(settings.defaultCurrency);
           if (!exchangeRates) {
-            return ctx.reply('Error fetching exchange rates. Please try again later.');
+            return ctx.reply('❌ Error fetching exchange rates. Please try again later.');
           }
 
           const exchangeRate = exchangeRates[state.currency] || 1;
@@ -81,11 +82,12 @@ module.exports = (bot) => {
           Object.assign(state, { amount, vatFee, totalAmount, step: 2 });
 
           return ctx.reply(
-            `Deposit Details:\n` +
-            `- Amount: ${state.currency} ${amount}\n` +
-            `- VAT (${settings.vatRate}%): ${state.currency} ${vatFee}\n` +
-            `- Total: ${state.currency} ${totalAmount}\n\n` +
-            `Confirm payment by typing "YES" or cancel with "CANCEL".`
+            `🧾 <b>Deposit Details:</b>\n` +
+              `- Amount: ${state.currency} ${amount}\n` +
+              `- VAT (${settings.vatRate}%): ${state.currency} ${vatFee}\n` +
+              `- Total: ${state.currency} ${totalAmount}\n\n` +
+              `✅ Confirm payment by typing "YES" or cancel with "CANCEL".`,
+            { parse_mode: 'HTML' }
           );
         }
 
@@ -93,11 +95,11 @@ module.exports = (bot) => {
           // Handle confirmation or cancellation
           if (userInput.toLowerCase() === 'cancel') {
             delete userDepositState[userId];
-            return ctx.reply('Deposit process canceled.');
+            return ctx.reply('❌ Deposit process canceled.');
           }
 
           if (userInput.toLowerCase() !== 'yes') {
-            return ctx.reply('Invalid response. Please type "YES" to confirm or "CANCEL" to cancel.');
+            return ctx.reply('❌ Invalid response. Please type "YES" to confirm or "CANCEL" to cancel.');
           }
 
           // Initialize Paystack transaction
@@ -114,23 +116,24 @@ module.exports = (bot) => {
           delete userDepositState[userId];
 
           return ctx.reply(
-            `Payment Summary:\n` +
-            `- Amount: ${currency} ${amount}\n` +
-            `- VAT: ${currency} ${vatFee}\n` +
-            `- Total: ${currency} ${totalAmount}\n\n` +
-            `Complete your payment using this link:\n${transaction.data.authorization_url}`
+            `✅ <b>Payment Summary:</b>\n` +
+              `- Amount: ${currency} ${amount}\n` +
+              `- VAT: ${currency} ${vatFee}\n` +
+              `- Total: ${currency} ${totalAmount}\n\n` +
+              `💳 Complete your payment using this link:\n${transaction.data.authorization_url}`,
+            { parse_mode: 'HTML' }
           );
         }
 
         default:
           // Clear invalid states
           delete userDepositState[userId];
-          return ctx.reply('Something went wrong. Please restart the deposit process using /deposit.');
+          return ctx.reply('❌ Something went wrong. Please restart the deposit process using /deposit.');
       }
     } catch (error) {
       console.error('Error during deposit process:', error.message);
       delete userDepositState[userId];
-      return ctx.reply('An error occurred. Please restart the deposit process.');
+      return ctx.reply('❌ An error occurred. Please restart the deposit process.');
     }
   });
 };
