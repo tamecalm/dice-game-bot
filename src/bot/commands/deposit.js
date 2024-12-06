@@ -20,36 +20,34 @@ const getExchangeRates = async (baseCurrency) => {
 };
 
 module.exports = (bot) => {
-  bot.command('deposit', async (ctx) => {
-    const userId = ctx.from.id;
-
-    try {
-      // Check if user exists
-      const user = await User.findOne({ telegramId: userId });
-      if (!user) {
-        return ctx.reply('You are not registered. Use /start to register.');
-      }
-
-      // Initialize deposit state
-      userDepositState[userId] = {
-        step: 1,
-        amount: null,
-        currency: user.currency || settings.defaultCurrency,
-      };
-
-      return ctx.reply(
-        `Welcome to the deposit process! Please enter the amount you'd like to deposit.\n` +
-        `Note: Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
-      );
-    } catch (error) {
-      console.error('Error handling /deposit command:', error.message);
-      return ctx.reply('An error occurred while starting the deposit process. Please try again later.');
-    }
-  });
-
-  // Handle user input after the deposit command
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
+
+    // Handle /deposit command
+    if (ctx.message.text === '/deposit') {
+      try {
+        // Check if user exists
+        const user = await User.findOne({ telegramId: userId });
+        if (!user) {
+          return ctx.reply('You are not registered. Use /start to register.');
+        }
+
+        // Initialize deposit state
+        userDepositState[userId] = {
+          step: 1,
+          amount: null,
+          currency: user.currency || settings.defaultCurrency,
+        };
+
+        return ctx.reply(
+          `Welcome to the deposit process! Please enter the amount you'd like to deposit.\n` +
+          `Note: Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
+        );
+      } catch (error) {
+        console.error('Error handling /deposit command:', error.message);
+        return ctx.reply('An error occurred while starting the deposit process. Please try again later.');
+      }
+    }
 
     // Exit if user is not in the deposit process
     if (!userDepositState[userId]) return;
