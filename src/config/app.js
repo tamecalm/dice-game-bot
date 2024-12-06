@@ -1,6 +1,6 @@
 // Import dependencies
 const express = require('express');
-const { Telegraf } = require('telegraf');  // Ensure Telegraf is correctly imported
+const bot = require('../bot/commands/bot'); // Importing bot instance from the existing file
 const connectDb = require('./db');
 const settings = require('./settings');
 const paystackWebhook = require('../webhook/paystack');
@@ -14,9 +14,6 @@ app.use(express.json()); // To parse JSON requests (like Paystack webhooks)
 // Define routes
 app.use('/webhook', paystackWebhook);
 
-// Initialize Telegraf bot with your bot token
-const bot = new Telegraf(settings.botToken);  // Ensure settings.botToken is defined properly
-
 // Async function to start the bot and connect to the database
 (async () => {
   try {
@@ -24,10 +21,13 @@ const bot = new Telegraf(settings.botToken);  // Ensure settings.botToken is def
     await connectDb();
     console.log('📦 Database connected successfully.');
 
-    // Start the bot (use bot.start() for Telegraf v4)
-    bot.start((ctx) => ctx.reply('Bot is now online!'));  // Example start handler
-    bot.launch();  // Launch the bot
-    console.log('🤖 Bot is up and running.');
+    // Ensure the bot is launched properly
+    if (bot.launch) {
+      bot.launch();  // Launch the bot if it has a launch method
+      console.log('🤖 Bot is up and running.');
+    } else {
+      console.error('❌ Bot does not have a launch method!');
+    }
 
   } catch (error) {
     // Log any error during the startup process
@@ -52,4 +52,3 @@ const port = process.env.PORT || 3000; // Default to 3000 if no environment vari
 app.listen(port, () => {
   console.log(`🚀 Server is running on port ${port}`);
 });
-
