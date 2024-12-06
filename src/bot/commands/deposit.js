@@ -20,7 +20,7 @@ const getExchangeRates = async (baseCurrency) => {
 };
 
 module.exports = (bot) => {
-  // Handle 'deposit' command
+  // Ensure bot is passed correctly and register command handlers
   bot.command('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
@@ -49,7 +49,7 @@ module.exports = (bot) => {
   });
 
   // Handle user input after the deposit command
-  bot.on('message', async (ctx) => {
+  bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
 
     // Exit if user is not in the deposit process
@@ -132,6 +132,7 @@ module.exports = (bot) => {
       }
     } catch (error) {
       console.error('Error during deposit process:', error.message);
+
       delete userDepositState[userId];
       return ctx.reply('An error occurred. Please restart the deposit process.');
     }
