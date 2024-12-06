@@ -21,7 +21,7 @@ bot.on('text', (ctx) => {
   } else if (text === '/deposit') {
     depositCommand(ctx);
   } else if (text === '/play') {
-    playCommand(bot)(ctx); // Pass bot as argument to playCommand
+    playCommand(ctx); // Pass bot as argument to playCommand
   } else if (text === '/admin') {
     adminCommand(ctx);
   } else {
@@ -32,5 +32,3 @@ bot.on('text', (ctx) => {
 
 // Export the bot instance
 module.exports = bot;
-
-bot.launch(); // Launch the bot
