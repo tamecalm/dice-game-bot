@@ -22,7 +22,7 @@ app.use('/webhook', paystackWebhook);
     console.log('📦 Database connected successfully.');
 
     // Launch the bot
-    bot.launch();  // This should now work because 'bot' has been initialized and exported
+    bot.launch();  // This will now be the only place bot.launch() is called
     console.log('🤖 Bot is up and running.');
 
   } catch (error) {
