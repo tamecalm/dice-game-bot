@@ -9,11 +9,11 @@ const adminCommand = require('./admin');
 const bot = new Telegraf(settings.botToken);
 
 // Register commands properly
-bot.start((ctx) => startCommand(ctx)); // Register /start command
-bot.command('balance', (ctx) => balanceCommand(ctx)); // Register /balance command
-bot.command('deposit', (ctx) => depositCommand(ctx)); // Register /deposit command
-bot.command('play', (ctx) => playCommand(ctx)); // Register /play command
-bot.command('admin', (ctx) => adminCommand(ctx)); // Register /admin command
+bot.start(async (ctx) => await startCommand(ctx)); // Register /start command
+bot.command('balance', async (ctx) => await balanceCommand(ctx)); // Register /balance command
+bot.command('deposit', async (ctx) => await depositCommand(ctx)); // Register /deposit command
+bot.command('play', async (ctx) => await playCommand(ctx)); // Register /play command
+bot.command('admin', async (ctx) => await adminCommand(ctx)); // Register /admin command
 
 // Handle unknown commands
 bot.on('text', (ctx) => {
