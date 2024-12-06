@@ -22,8 +22,9 @@ app.use('/webhook', paystackWebhook);
     console.log('📦 Database connected successfully.');
 
     // Initialize the bot properly
-    const bot = new Telegraf(settings.botToken); // Use new to create the bot instance
-    
+    const bot = new Telegraf(settings.botToken);
+    console.log('Bot instance created:', bot);  // Log bot instance
+
     // Adding a log before launching the bot
     console.log('🚀 Attempting to launch the bot...');
     
@@ -33,6 +34,7 @@ app.use('/webhook', paystackWebhook);
       console.log('🤖 Bot is up and running.');
     } catch (launchError) {
       console.error('❌ Error during bot launch:', launchError);
+      throw launchError; // Re-throw to ensure error is logged correctly
     }
 
   } catch (error) {
