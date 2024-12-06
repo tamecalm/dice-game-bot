@@ -30,4 +30,4 @@ bot.on('text', (ctx) => {
   }
 });
 
-// bot.launch(); // Launch the bot
+bot.launch(); // Launch the bot
