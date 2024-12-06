@@ -1,5 +1,6 @@
 const { Markup } = require('telegraf');
 const User = require('../../models/User');
+const settings = require('../../config/settings'); // Import admin ID settings
 
 module.exports = async (ctx) => {
   try {
@@ -69,6 +70,19 @@ Ready to roll the dice and win big? Here's what you can do:
       ])
         .resize()
         .oneTime(false);
+    }
+
+    // Add admin options if the user is an admin
+    if (settings.adminIds.includes(telegramId)) {
+      welcomeMessage += `
+
+🛠 **Admin Panel**  
+Manage and monitor your bot with admin tools.`;
+
+      keyboard = keyboard.resize().keyboard([
+        ...keyboard.reply_markup.keyboard,
+        ['🛠 Admin Panel'],
+      ]);
     }
 
     // Send the welcome message with keyboard buttons

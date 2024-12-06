@@ -7,8 +7,8 @@ const balanceCommand = require('./balance');
 const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
-const withdrawalCommand = require('./withdrawal'); // New: withdrawal logic
-const referralCommand = require('./referral');     // New: referral logic
+const withdrawalCommand = require('./withdrawal');
+const referralCommand = require('./referral');
 
 // Initialize the bot
 const bot = new Telegraf(settings.botToken);
@@ -18,14 +18,36 @@ bot.command('start', startCommand);
 bot.command('balance', balanceCommand);
 bot.command('deposit', depositCommand);
 bot.command('play', playCommand);
-bot.command('withdrawal', withdrawalCommand); // Register withdrawal command
-bot.command('referral', referralCommand);     // Register referral command
-bot.command('admin', adminCommand);
+bot.command('withdrawal', withdrawalCommand);
+bot.command('referral', referralCommand);
+
+// Admin-only command
+bot.command('admin', (ctx) => {
+  if (!settings.adminIds.includes(ctx.from.id)) {
+    return ctx.reply('❌ You are not authorized to access the admin panel.');
+  }
+  return adminCommand(ctx);
+});
+
+// Register keyboard commands
+bot.hears('💰 Deposit', depositCommand);
+bot.hears('🎮 Play', playCommand);
+bot.hears('📊 Balance', balanceCommand);
+bot.hears('🏦 Withdrawal', withdrawalCommand);
+bot.hears('👥 Referral', referralCommand);
+
+// Admin Panel (keyboard)
+bot.hears('🛠 Admin Panel', (ctx) => {
+  if (!settings.adminIds.includes(ctx.from.id)) {
+    return ctx.reply('❌ You are not authorized to access the admin panel.');
+  }
+  return adminCommand(ctx);
+});
 
 // Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
   ctx.replyWithHTML(
-    '❌ <b>Unknown command.</b>\nUse <code>/start</code> to see available commands.'
+    '❌ <b>Unknown command or input.</b>\nUse <code>/start</code> to see available commands.'
   );
 });
 

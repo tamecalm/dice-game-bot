@@ -1,93 +1,30 @@
-// Admin Logics
+const { Markup } = require('telegraf');
 const User = require('../../models/User');
 const Game = require('../../models/Game');
 const settings = require('../../config/settings');
 
 module.exports = async (ctx) => {
   try {
-    // Ensure context validity
-    if (!ctx.from || !ctx.message?.text) {
-      console.error('Invalid context object received:', ctx);
-      return ctx.replyWithHTML(
-        '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
-      );
-    }
-
     // Check if the user is the admin
     const adminId = settings.adminId;
     if (ctx.from.id.toString() !== adminId) {
       return ctx.replyWithHTML('❌ <b>Unauthorized access.</b>');
     }
 
-    // Parse command and arguments
-    const commandArgs = ctx.message.text.split(' ').slice(1);
-    const subCommand = commandArgs[0]?.toLowerCase();
+    // Build the Admin Panel with inline buttons
+    const adminPanel = Markup.inlineKeyboard([
+      [Markup.button.callback('📊 Stats', 'admin_stats')],
+      [Markup.button.callback('📢 Broadcast', 'admin_broadcast')],
+      [Markup.button.callback('👤 Manage Users', 'admin_manage_users')],
+      [Markup.button.callback('🎮 Manage Games', 'admin_manage_games')],
+    ]);
 
-    switch (subCommand) {
-      case 'stats': {
-        // Fetch stats
-        const totalUsers = await User.countDocuments();
-        const totalGames = await Game.countDocuments();
-        const totalDeposits = (
-          await User.aggregate([
-            { $group: { _id: null, total: { $sum: '$totalDeposits' } } },
-          ])
-        )[0]?.total || 0;
-
-        // Reply with stats
-        return ctx.replyWithHTML(
-          `<b>📊 Admin Stats:</b>\n` +
-          `👤 <b>Total Users:</b> ${totalUsers}\n` +
-          `🎮 <b>Total Games:</b> ${totalGames}\n` +
-          `💰 <b>Total Deposits:</b> ${totalDeposits.toFixed(2)} ${settings.defaultCurrency}`
-        );
-      }
-
-      case 'broadcast': {
-        const message = commandArgs.slice(1).join(' ');
-
-        if (!message) {
-          return ctx.replyWithHTML(
-            '❌ <b>Invalid broadcast message.</b>\nPlease provide a message to send.'
-          );
-        }
-
-        const users = await User.find();
-
-        // Send broadcast to all users
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const user of users) {
-          try {
-            await ctx.telegram.sendMessage(
-              user.telegramId,
-              `📢 <b>Announcement:</b>\n${message}`,
-              { parse_mode: 'HTML' }
-            );
-            successCount++;
-          } catch (err) {
-            console.error(`Failed to send message to ${user.telegramId}:`, err);
-            failCount++;
-          }
-        }
-
-        // Reply with broadcast results
-        return ctx.replyWithHTML(
-          `📢 <b>Broadcast Results:</b>\n` +
-          `✅ <b>Messages Sent:</b> ${successCount}\n` +
-          `❌ <b>Failed Deliveries:</b> ${failCount}`
-        );
-      }
-
-      default:
-        // Reply with command usage guide
-        return ctx.replyWithHTML(
-          `<b>⚙️ Admin Commands:</b>\n` +
-          `- <code>/admin stats</code> — View platform statistics.\n` +
-          `- <code>/admin broadcast [message]</code> — Send a broadcast to all users.`
-        );
-    }
+    // Reply with the Admin Panel UI
+    return ctx.replyWithHTML(
+      `<b>🛠 Welcome to the Admin Panel</b>\n\n` +
+        `Select an option below to manage the platform:`,
+      adminPanel
+    );
   } catch (error) {
     console.error('Error in admin command:', error.message);
 
@@ -97,5 +34,80 @@ module.exports = async (ctx) => {
         '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
       );
     }
+  }
+};
+
+// Handle admin actions using callbacks
+module.exports.handleAdminCallbacks = async (ctx) => {
+  try {
+    const callbackData = ctx.callbackQuery.data;
+    const adminId = settings.adminId;
+
+    if (ctx.from.id.toString() !== adminId) {
+      return ctx.answerCbQuery('Unauthorized access.', { show_alert: true });
+    }
+
+    switch (callbackData) {
+      case 'admin_stats': {
+        // Fetch platform statistics
+        const totalUsers = await User.countDocuments();
+        const totalGames = await Game.countDocuments();
+        const totalDeposits = (
+          await User.aggregate([
+            { $group: { _id: null, total: { $sum: '$totalDeposits' } } },
+          ])
+        )[0]?.total || 0;
+
+        // Reply with statistics
+        return ctx.editMessageText(
+          `<b>📊 Platform Statistics:</b>\n\n` +
+            `👤 <b>Total Users:</b> ${totalUsers}\n` +
+            `🎮 <b>Total Games:</b> ${totalGames}\n` +
+            `💰 <b>Total Deposits:</b> ${totalDeposits.toFixed(2)} ${settings.defaultCurrency}`,
+          { parse_mode: 'HTML', reply_markup: ctx.callbackQuery.message.reply_markup }
+        );
+      }
+
+      case 'admin_broadcast': {
+        // Provide broadcast instructions
+        return ctx.editMessageText(
+          `<b>📢 Broadcast:</b>\n\n` +
+            `Send a message to all users.\n\n` +
+            `Reply to this message with your broadcast content.`,
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      case 'admin_manage_users': {
+        // Provide user management options
+        return ctx.editMessageText(
+          `<b>👤 Manage Users:</b>\n\n` +
+            `- <code>View User Data</code>\n` +
+            `- <code>Block Users</code>\n` +
+            `- <code>Reset Balances</code>\n\n` +
+            `Use commands for advanced management.`,
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      case 'admin_manage_games': {
+        // Provide game management options
+        return ctx.editMessageText(
+          `<b>🎮 Manage Games:</b>\n\n` +
+            `- <code>View Game Stats</code>\n` +
+            `- <code>Cancel Games</code>\n` +
+            `- <code>Resolve Disputes</code>\n\n` +
+            `Select an option for detailed actions.`,
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      default:
+        // Handle unknown callbacks
+        return ctx.answerCbQuery('❌ Unknown action.', { show_alert: true });
+    }
+  } catch (error) {
+    console.error('Error handling admin callback:', error.message);
+    ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
   }
 };
