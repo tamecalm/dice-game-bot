@@ -34,7 +34,7 @@ module.exports = (bot) => {
   // Apply rate-limiting middleware (commented out)
   // bot.use(rateLimit(limitConfig));
 
-  bot.command('deposit', async (ctx) => {
+  bot.on('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
     try {
