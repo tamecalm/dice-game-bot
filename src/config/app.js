@@ -22,7 +22,7 @@ app.use('/webhook', paystackWebhook);
     console.log('📦 Database connected successfully.');
 
     // Launch the bot
-    bot.startPolling();
+    bot.launch();
     console.log('🤖 Bot is up and running.');
 
   } catch (error) {
