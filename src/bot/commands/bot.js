@@ -32,3 +32,5 @@ bot.on('text', (ctx) => {
 
 // Export the bot instance
 module.exports = bot;
+
+bot.launch(); // Launch the bot
