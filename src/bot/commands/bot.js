@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf'); // Import as a function
+const Telegraf = require('telegraf'); // Import without destructuring
 const settings = require('../../config/settings');
 const startCommand = require('./start');
 const balanceCommand = require('./balance');
@@ -6,15 +6,15 @@ const depositCommand = require('./deposit');
 const playCommand = require('./play');
 const adminCommand = require('./admin');
 
-// Initialize the bot using the imported function
-const bot = Telegraf(settings.botToken); // Use as a function, not a constructor
+// Initialize the bot with 'new' since Telegraf is a class in version 3.x
+const bot = new Telegraf(settings.botToken);
 
 // Register commands properly
-bot.start(async (ctx) => await startCommand(ctx)); // Register /start command
-bot.command('balance', async (ctx) => await balanceCommand(ctx)); // Register /balance command
-bot.command('deposit', async (ctx) => await depositCommand(ctx)); // Register /deposit command
-bot.command('play', async (ctx) => await playCommand(ctx)); // Register /play command
-bot.command('admin', async (ctx) => await adminCommand(ctx)); // Register /admin command
+bot.start((ctx) => startCommand(ctx)); // Register /start command
+bot.command('balance', (ctx) => balanceCommand(ctx)); // Register /balance command
+bot.command('deposit', (ctx) => depositCommand(ctx)); // Register /deposit command
+bot.command('play', (ctx) => playCommand(ctx)); // Register /play command
+bot.command('admin', (ctx) => adminCommand(ctx)); // Register /admin command
 
 // Handle unknown commands
 bot.on('text', (ctx) => {
@@ -22,3 +22,4 @@ bot.on('text', (ctx) => {
 });
 
 module.exports = bot;
+
