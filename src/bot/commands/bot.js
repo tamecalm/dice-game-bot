@@ -30,4 +30,5 @@ bot.on('text', (ctx) => {
   }
 });
 
-// bot.launch(); // Launch the bot
+// Export the bot instance
+module.exports = bot;
