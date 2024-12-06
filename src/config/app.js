@@ -1,6 +1,6 @@
 // Import dependencies
 const express = require('express');
-const bot = require('../bot/commands/bot');
+const { Telegraf } = require('telegraf');  // Ensure correct import
 const connectDb = require('./db');
 const settings = require('./settings');
 const paystackWebhook = require('../webhook/paystack');
@@ -21,8 +21,9 @@ app.use('/webhook', paystackWebhook);
     await connectDb();
     console.log('📦 Database connected successfully.');
 
-    // Launch the bot
-    bot.launch();
+    // Initialize the bot properly
+    const bot = new Telegraf(settings.botToken); // Use new to create the bot instance
+    await bot.launch(); // Launch the bot
     console.log('🤖 Bot is up and running.');
 
   } catch (error) {
