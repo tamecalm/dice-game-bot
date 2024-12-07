@@ -1,4 +1,5 @@
 const User = require('../../models/User');
+const { Markup } = require('telegraf');
 
 module.exports = (bot) => {
   // Inline button handler for "Balance"
@@ -17,10 +18,16 @@ module.exports = (bot) => {
         );
       }
 
+      // Format the balance (remove decimals)
+      const formattedBalance = user.balance.toFixed(0); // Removes decimals
+
       // Respond with user's balance
       return ctx.replyWithHTML(
-        `💰 <b>Your Balance:</b> ${user.balance.toFixed(2)} ${user.currency}\n\n` +
-        `🔄 <i>Need to top up? Use the /deposit command.</i>`
+        `💰 <b>Your Balance:</b> ${formattedBalance} ${user.currency}\n\n` +
+        `🔄 <i>Need to top up? Use the /deposit command.</i>`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Back to Menu', 'menu')] // Add back to menu button
+        ])
       );
     } catch (error) {
       console.error('Error in balance action:', error.message);
@@ -47,10 +54,16 @@ module.exports = (bot) => {
         );
       }
 
+      // Format the balance (remove decimals)
+      const formattedBalance = user.balance.toFixed(0); // Removes decimals
+
       // Respond with user's balance
       return ctx.replyWithHTML(
-        `💰 <b>Your Balance:</b> ${user.balance.toFixed(2)} ${user.currency}\n\n` +
-        `🔄 <i>Need to top up? Use the /deposit command.</i>`
+        `💰 <b>Your Balance:</b> ${formattedBalance} ${user.currency}\n\n` +
+        `🔄 <i>Need to top up? Use the /deposit command.</i>`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('⬅️ Back to Menu', 'menu')] // Add back to menu button
+        ])
       );
     } catch (error) {
       console.error('Error in balance command:', error.message);
