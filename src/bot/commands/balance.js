@@ -1,6 +1,7 @@
 const User = require('../../models/User');
 
-module.exports = async (ctx) => {
+module.exports = (bot) => {
+  bot.command('📊 Balance', async (ctx) => {
   try {
     // Ensure the context is valid
     if (!ctx?.from) {
