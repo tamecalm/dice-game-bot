@@ -14,41 +14,23 @@ const referralCommand = require('./referral');
 const bot = new Telegraf(settings.botToken);
 
 // Register command handlers
-bot.command('start', startCommand);
-bot.command('balance', balanceCommand);
-bot.command('deposit', depositCommand);
-playCommand(bot); // Registers /play and associated actions
-bot.command('withdrawal', withdrawalCommand);
-bot.command('referral', referralCommand);
-
-// Admin-only command
-bot.command('admin', (ctx) => {
-  if (!settings.adminIds.includes(ctx.from.id)) {
-    return ctx.reply('❌ You are not authorized to access the admin panel.');
-  }
-  return adminCommand(ctx);
-});
+startCommand(bot);     // Registers /start and any related actions
+balanceCommand(bot);   // Registers /balance and any related actions
+depositCommand(bot);   // Registers /deposit and any related actions
+playCommand(bot);      // Registers /play and any related actions
+withdrawalCommand(bot);// Registers /withdrawal and any related actions
+referralCommand(bot);  // Registers /referral and any related actions
+adminCommand(bot);     // Registers /admin and any related actions
 
 // Register keyboard commands
-bot.hears('💰 Deposit', depositCommand);
-bot.hears('🎮 Play', (ctx) => {
-  // Trigger the same logic as /play for consistency
-  ctx.telegram.sendMessage(
-    ctx.chat.id,
-    '🎮 Use /play to start a game!'
-  );
-});
-bot.hears('📊 Balance', balanceCommand);
-bot.hears('🏦 Withdrawal', withdrawalCommand);
-bot.hears('👥 Referral', referralCommand);
+bot.hears('💰 Deposit', (ctx) => depositCommand(bot, ctx));
+bot.hears('🎮 Play', (ctx) => playCommand(bot, ctx));
+bot.hears('📊 Balance', (ctx) => balanceCommand(bot, ctx));
+bot.hears('🏦 Withdrawal', (ctx) => withdrawalCommand(bot, ctx));
+bot.hears('👥 Referral', (ctx) => referralCommand(bot, ctx));
 
 // Admin Panel (keyboard)
-bot.hears('🛠 Admin Panel', (ctx) => {
-  if (!settings.adminIds.includes(ctx.from.id)) {
-    return ctx.reply('❌ You are not authorized to access the admin panel.');
-  }
-  return adminCommand(ctx);
-});
+bot.hears('🛠 Admin Panel', (ctx) => adminCommand(bot, ctx));
 
 // Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
@@ -64,10 +46,6 @@ bot.catch((err, ctx) => {
     '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
   );
 });
-
-// Launch the bot
-// bot.launch();
-// console.log('Bot is running...');
 
 // Export the bot instance
 module.exports = bot;
