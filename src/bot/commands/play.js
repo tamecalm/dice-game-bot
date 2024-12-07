@@ -27,7 +27,7 @@ const playCommand = (bot) => {
     }
   });
 
-  bot.action('play', async (ctx) => {
+  bot.command('play', async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || 'Anonymous';
 
