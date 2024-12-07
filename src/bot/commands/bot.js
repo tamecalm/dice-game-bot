@@ -66,8 +66,8 @@ bot.catch((err, ctx) => {
 });
 
 // Launch the bot
-bot.launch();
-console.log('Bot is running...');
+// bot.launch();
+// console.log('Bot is running...');
 
 // Export the bot instance
 module.exports = bot;
