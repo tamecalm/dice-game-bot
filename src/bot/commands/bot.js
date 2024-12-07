@@ -17,7 +17,7 @@ const bot = new Telegraf(settings.botToken);
 bot.command('start', startCommand);
 bot.command('balance', balanceCommand);
 bot.command('deposit', depositCommand);
-bot.command('play', playCommand);
+playCommand(bot); // bot.command('play', playCommand);
 bot.command('withdrawal', withdrawalCommand);
 bot.command('referral', referralCommand);
 
