@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
+const bot = require('../bot/commands/bot');  // Import the bot instance
 
 const router = express.Router();
 
@@ -54,6 +55,11 @@ router.post('/paystack-webhook', bodyParser.json(), async (req, res) => {
             console.log(
                 `Deposit of ${currency} ${depositAmount} (after VAT ${currency} ${vatFee}) credited to user ${userId}`
             );
+
+            // Send confirmation message to user on Telegram
+            const successMessage = `Your account has been credited with ${currency} ${depositAmount} after a VAT of ${currency} ${vatFee}. Your new balance is ${currency} ${user.balance}.`;
+            await bot.telegram.sendMessage(userId, successMessage);
+
             return res.status(200).send('Transaction processed successfully');
         } catch (error) {
             console.error('Error processing webhook:', error.message);
