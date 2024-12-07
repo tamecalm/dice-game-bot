@@ -6,19 +6,6 @@ const settings = require('../../config/settings');
 // State management for deposit process
 const userDepositState = {};
 
-// Helper: Fetch exchange rates (currently commented out)
-// const getExchangeRates = async (baseCurrency) => {
-//   try {
-//     const response = await axios.get(
-//       `https://v6.exchangerate-api.com/v6/caadc6a03dcb054f3906bd95/latest/${baseCurrency}`
-//     );
-//     return response.data.rates;
-//   } catch (error) {
-//     console.error('Error fetching exchange rates:', error.message);
-//     return null;
-//   }
-// };
-
 // Inline button handler
 module.exports = (bot) => {
   bot.action('deposit', async (ctx) => {
@@ -35,13 +22,13 @@ module.exports = (bot) => {
       userDepositState[userId] = {
         step: 1,
         amount: null,
-        currency: 'USD', // Default currency set to USD
+        currency: 'NGN', // Default currency set to NGN (Paystack-supported)
       };
 
       return ctx.reply(
         `💳 Welcome to the deposit process!\n` +
           `Please enter the amount you'd like to deposit.\n` +
-          `Note: Minimum deposit is ${settings.minimumDeposit} USD.`
+          `Note: Minimum deposit is ${settings.minimumDeposit} NGN.`
       );
     } catch (error) {
       console.error('Error in deposit initialization:', error.stack);
@@ -62,15 +49,8 @@ module.exports = (bot) => {
           // Validate deposit amount
           const amount = parseFloat(userInput);
           if (isNaN(amount) || amount < settings.minimumDeposit) {
-            return ctx.reply(`❌ Invalid amount. Minimum deposit is ${settings.minimumDeposit} USD.`);
+            return ctx.reply(`❌ Invalid amount. Minimum deposit is ${settings.minimumDeposit} NGN.`);
           }
-
-          // Commented out exchange rate logic
-          // const exchangeRates = await getExchangeRates('USD');
-          // if (!exchangeRates) {
-          //   return ctx.reply('❌ Error fetching exchange rates. Please try again later.');
-          // }
-          // const exchangeRate = exchangeRates[state.currency] || 1;
 
           const vatRate = settings.vatRate / 100;
           const vatFee = (amount * vatRate).toFixed(2);
@@ -81,9 +61,9 @@ module.exports = (bot) => {
 
           return ctx.reply(
             `🧾 <b>Deposit Details:</b>\n` +
-              `- Amount: USD ${amount}\n` +
-              `- VAT (${settings.vatRate}%): USD ${vatFee}\n` +
-              `- Total: USD ${totalAmount}\n\n` +
+              `- Amount: NGN ${amount}\n` +
+              `- VAT (${settings.vatRate}%): NGN ${vatFee}\n` +
+              `- Total: NGN ${totalAmount}\n\n` +
               `✅ Confirm payment by typing "YES" or cancel with "CANCEL".`,
             { parse_mode: 'HTML' }
           );
@@ -106,7 +86,7 @@ module.exports = (bot) => {
             const transaction = await paystack.transaction.initialize({
               email: `${userId}@example.com`, // Replace with actual user email in production
               amount: totalAmount * 100, // Convert to smallest currency unit
-              currency: 'USD',
+              currency: 'NGN', // Use NGN as the default currency
               callback_url: `${process.env.PAYSTACK_CALLBACK_URL}`,
               metadata: { userId, amount, vatFee },
             });
@@ -116,9 +96,9 @@ module.exports = (bot) => {
 
             return ctx.reply(
               `✅ <b>Payment Summary:</b>\n` +
-                `- Amount: USD ${amount}\n` +
-                `- VAT: USD ${vatFee}\n` +
-                `- Total: USD ${totalAmount}\n\n` +
+                `- Amount: NGN ${amount}\n` +
+                `- VAT: NGN ${vatFee}\n` +
+                `- Total: NGN ${totalAmount}\n\n` +
                 `💳 Complete your payment using this link:\n${transaction.data.authorization_url}`,
               { parse_mode: 'HTML' }
             );
