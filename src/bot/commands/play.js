@@ -1,4 +1,5 @@
 const { joinQueue, leaveQueue } = require('../../utils/matchmaking');
+const bot = require('../bot/commands/bot');
 const diceRoll = require('../../utils/dice');
 const User = require('../../models/User');
 const settings = require('../../config/settings');
