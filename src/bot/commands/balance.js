@@ -26,7 +26,7 @@ module.exports = (bot) => {
 
       // Fetch exchange rate from the API
       const exchangeRateResponse = await axios.get(
-        `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE}/latest/NGN`
+        `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/latest/NGN`
       );
 
       // Get the USD equivalent rate from NGN
@@ -85,7 +85,7 @@ module.exports = (bot) => {
 
       // Fetch exchange rate from the API
       const exchangeRateResponse = await axios.get(
-        `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE}/latest/NGN`
+        `https://v6.exchangerate-api.com/v6/${process.env.EXCHANGE_RATE_API_KEY}/latest/NGN`
       );
 
       // Get the USD equivalent rate from NGN
