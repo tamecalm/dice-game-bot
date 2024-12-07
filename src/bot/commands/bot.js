@@ -38,7 +38,7 @@ bot.action('menu', async (ctx) => {
       Markup.inlineKeyboard([
         [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
         [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
-        [Markup.button.callback('👥 Referral')],
+        [Markup.button.callback('👥 Referral', 'referral')], // Added 'referral' action here
       ])
     );
   } catch (error) {
