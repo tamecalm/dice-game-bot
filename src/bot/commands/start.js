@@ -24,7 +24,7 @@ module.exports = (bot) => {
       // Find the user in the database or create a new one
       let user = await User.findOne({ telegramId });
       let welcomeMessage;
-      let keyboardButtons;
+      let inlineButtons;
 
       if (!user) {
         user = new User({ telegramId, username });
@@ -43,11 +43,11 @@ Here's what you can do:
 👥 **Refer Friends**  
 🏦 **Withdraw Your Winnings**`;
 
-        keyboardButtons = [
-          ['💰 Deposit', '🎮 Play'],
-          ['📊 Balance', '🏦 Withdrawal'],
-          ['👥 Referral'],
-        ];
+        inlineButtons = Markup.inlineKeyboard([
+          [Markup.button.callback('💰 Deposit', 'deposit'), Markup.button.callback('🎮 Play', 'play')],
+          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+          [Markup.button.callback('👥 Referral', 'referral')],
+        ]);
       } else {
         console.log(`Returning user: ${username} (ID: ${telegramId})`);
 
@@ -62,11 +62,11 @@ Ready to roll the dice and win big? Here's what you can do:
 👥 **Refer Friends for Rewards**  
 🏦 **Withdraw Your Winnings**`;
 
-        keyboardButtons = [
-          ['🎮 Play', '💰 Deposit'],
-          ['📊 Balance', '🏦 Withdrawal'],
-          ['👥 Referral'],
-        ];
+        inlineButtons = Markup.inlineKeyboard([
+          [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
+          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+          [Markup.button.callback('👥 Referral', 'referral')],
+        ]);
       }
 
       // Add admin options if the user is an admin
@@ -76,12 +76,13 @@ Ready to roll the dice and win big? Here's what you can do:
 🛠 **Admin Panel**  
 Manage and monitor your bot with admin tools.`;
 
-        keyboardButtons.push(['🛠 Admin Panel']);
+        inlineButtons.inline_keyboard.push([
+          Markup.button.callback('🛠 Admin Panel', 'admin'),
+        ]);
       }
 
-      // Create the keyboard and send the welcome message
-      const keyboard = Markup.keyboard(keyboardButtons).resize();
-      await ctx.replyWithMarkdown(welcomeMessage, keyboard);
+      // Send the welcome message with inline buttons
+      await ctx.replyWithMarkdown(welcomeMessage, inlineButtons);
     } catch (error) {
       console.error('Error in start command:', error.message);
 

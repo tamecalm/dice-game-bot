@@ -19,9 +19,9 @@ const getExchangeRates = async (baseCurrency) => {
   }
 };
 
-// Command handler
+// Inline button handler
 module.exports = (bot) => {
-  bot.command('deposit', async (ctx) => {
+  bot.action('deposit', async (ctx) => {
     const userId = ctx.from.id;
 
     try {
@@ -49,6 +49,7 @@ module.exports = (bot) => {
     }
   });
 
+  // Handle text input during deposit process
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
     if (!userDepositState[userId]) return; // Exit if user is not in deposit flow
@@ -128,7 +129,7 @@ module.exports = (bot) => {
         default:
           // Clear invalid states
           delete userDepositState[userId];
-          return ctx.reply('❌ Something went wrong. Please restart the deposit process using /deposit.');
+          return ctx.reply('❌ Something went wrong. Please restart the deposit process.');
       }
     } catch (error) {
       console.error('Error during deposit process:', error.message);
