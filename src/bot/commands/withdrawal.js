@@ -1,7 +1,7 @@
 const User = require('../../models/User');
 
 module.exports = (bot) => {
-  bot.command('🏦 Withdrawal', async (ctx) => {
+  bot.action('🏦 Withdrawal', async (ctx) => {
     try {
       if (!ctx || !ctx.from || !ctx.message || !ctx.message.text) {
         console.error('Invalid context object:', ctx);
