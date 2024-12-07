@@ -37,7 +37,7 @@ module.exports = (bot) => {
 
       // Generate a referral code if the user doesn't already have one
       if (!user.referralCode) {
-        user.referralCode = `dice${telegramId}`; // Generate unique referral code
+        user.referralCode = `REF-${telegramId}`; // Generate unique referral code
         await user.save();
       }
 
