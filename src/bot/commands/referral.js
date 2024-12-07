@@ -54,7 +54,7 @@ module.exports = (bot) => {
 
       // Generate a referral code if the user doesn't already have one
       if (!user.referralCode) {
-        user.referralCode = `REF-${telegramId}`; // Generate unique referral code
+        user.referralCode = `${telegramId}`; // Generate unique referral code
         await user.save();
       }
 
@@ -77,24 +77,23 @@ module.exports = (bot) => {
     }
   });
 
-  // Inline button handler for "Back to Menu"
-  bot.action('menu', async (ctx) => {
-    try {
-      // Acknowledge the button click
-      await ctx.answerCbQuery();
+// Inline button handler for "Back to Menu"
+bot.action('menu', async (ctx) => {
+  try {
+    // Acknowledge the button click
+    await ctx.answerCbQuery();
 
-      // Redirect to the main menu (or replace with your actual menu handler)
-      await ctx.reply(
-        `⬅️ Back to the main menu!`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('💰 Deposit', 'deposit'), Markup.button.callback('🎮 Play', 'play')],
-          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
-          [Markup.button.callback('👥 Referral', 'referral')],
-        ])
-      );
-    } catch (error) {
-      console.error('Error in back to menu handler:', error.message);
-      ctx.reply('❌ An unexpected error occurred. Please try again later.');
-    }
-  });
-};
+    // Display the main menu
+    await ctx.reply(
+      `⬅️ Back to the main menu! Choose an option:`,
+      Markup.inlineKeyboard([
+        [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
+        [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+        [Markup.button.callback('👥 Referral', 'referral')],
+      ])
+    );
+  } catch (error) {
+    console.error('Error in back to menu handler:', error.message);
+    ctx.reply('❌ An unexpected error occurred. Please try again later.');
+  }
+});
