@@ -11,8 +11,19 @@ const app = express();
 // Middleware setup (if required)
 app.use(express.json()); // To parse JSON requests (like Paystack webhooks)
 
+// Log incoming requests
+app.use((req, res, next) => {
+  console.log(`[${req.method}] ${req.url}`);
+  next();
+});
+
 // Define routes
 app.use('/webhook', paystackWebhook);
+
+// Add a test route for debugging
+app.get('/webhook/test', (req, res) => {
+  res.send('Webhook route is working');
+});
 
 // Async function to start the bot and connect to the database
 (async () => {
