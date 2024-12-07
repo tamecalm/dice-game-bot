@@ -7,8 +7,8 @@ module.exports = {
   defaultCurrency: 'USD',
   minimumDeposit: 1,
   minBet: 1,
-  maxBet: 10
-  matchMakingTimeout: 20, //  
+  maxBet: 10,
+  matchMakingTimeout: 20,
   vatRate: 5, // VAT percentage
   paystackSecretKey: process.env.PAYSTACK_SECRET_KEY
 };
