@@ -1,5 +1,6 @@
 const User = require('../../models/User');
 const { Markup } = require('telegraf');
+const settings = require('../../config/settings'); // Import settings to access defaultCurrency
 
 module.exports = (bot) => {
   // Inline button handler for "Balance"
@@ -21,9 +22,12 @@ module.exports = (bot) => {
       // Format the balance (remove decimals)
       const formattedBalance = user.balance.toFixed(0); // Removes decimals
 
+      // Use user.currency or fallback to settings.defaultCurrency
+      const currency = user.currency || settings.defaultCurrency;
+
       // Respond with user's balance
       return ctx.replyWithHTML(
-        `💰 <b>Your Balance:</b> ${formattedBalance} ${user.currency}\n\n` +
+        `💰 <b>Your Balance:</b> ${formattedBalance} ${currency}\n\n` +
         `🔄 <i>Need to top up? Use the /deposit command.</i>`,
         Markup.inlineKeyboard([
           [Markup.button.callback('⬅️ Back to Menu', 'menu')] // Add back to menu button
@@ -57,9 +61,12 @@ module.exports = (bot) => {
       // Format the balance (remove decimals)
       const formattedBalance = user.balance.toFixed(0); // Removes decimals
 
+      // Use user.currency or fallback to settings.defaultCurrency
+      const currency = user.currency || settings.defaultCurrency;
+
       // Respond with user's balance
       return ctx.replyWithHTML(
-        `💰 <b>Your Balance:</b> ${formattedBalance} ${user.currency}\n\n` +
+        `💰 <b>Your Balance:</b> ${formattedBalance} ${currency}\n\n` +
         `🔄 <i>Need to top up? Use the /deposit command.</i>`,
         Markup.inlineKeyboard([
           [Markup.button.callback('⬅️ Back to Menu', 'menu')] // Add back to menu button
