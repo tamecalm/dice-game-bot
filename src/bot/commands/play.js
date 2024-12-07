@@ -3,7 +3,7 @@ const diceRoll = require('../../utils/dice');
 const User = require('../../models/User');
 const settings = require('../../config/settings');
 const { Markup } = require('telegraf');
-const bot = require('../bot'); // Import the bot instance
+const bot = require('./bot'); // Import the bot instance
 
 const playCommand = async (ctx) => {
     const telegramId = ctx.from.id;
