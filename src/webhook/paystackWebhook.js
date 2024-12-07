@@ -1,4 +1,4 @@
-xconst express = require('express');
+const express = require('express');
 const User = require('../models/User');
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
