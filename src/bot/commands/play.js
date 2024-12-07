@@ -1,12 +1,10 @@
 const { joinQueue, leaveQueue } = require('../../utils/matchmaking');
-const playCommand = require('./play');
 const diceRoll = require('../../utils/dice');
 const User = require('../../models/User');
 const settings = require('../../config/settings');
 const { Markup } = require('telegraf');
 
-module.exports = (bot) => {
-  bot.command('play', async (ctx) => {
+const playCommand = async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || 'Anonymous';
 
@@ -169,3 +167,5 @@ module.exports = (bot) => {
     }
   });
 };
+
+module.exports = playCommand;
