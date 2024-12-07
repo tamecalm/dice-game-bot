@@ -17,7 +17,7 @@ const bot = new Telegraf(settings.botToken);
 bot.command('start', startCommand);
 bot.command('balance', balanceCommand);
 bot.command('deposit', depositCommand);
-playCommand(bot); // bot.command('play', playCommand);
+playCommand(bot); // Registers /play and associated actions
 bot.command('withdrawal', withdrawalCommand);
 bot.command('referral', referralCommand);
 
@@ -31,7 +31,13 @@ bot.command('admin', (ctx) => {
 
 // Register keyboard commands
 bot.hears('💰 Deposit', depositCommand);
-bot.hears('🎮 Play', playCommand);
+bot.hears('🎮 Play', (ctx) => {
+  // Trigger the same logic as /play for consistency
+  ctx.telegram.sendMessage(
+    ctx.chat.id,
+    '🎮 Use /play to start a game!'
+  );
+});
 bot.hears('📊 Balance', balanceCommand);
 bot.hears('🏦 Withdrawal', withdrawalCommand);
 bot.hears('👥 Referral', referralCommand);
@@ -58,6 +64,10 @@ bot.catch((err, ctx) => {
     '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
   );
 });
+
+// Launch the bot
+bot.launch();
+console.log('Bot is running...');
 
 // Export the bot instance
 module.exports = bot;
