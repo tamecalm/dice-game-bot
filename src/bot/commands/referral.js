@@ -23,7 +23,7 @@ module.exports = (bot) => {
         `📲 <b>Referral Link:</b> <a href="${referralLink}">${referralLink}</a>\n` +
         `💰 Invite your friends and earn rewards when they join!`,
         Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Back to Menu', 'menu')],
+          [Markup.button.callback('⬅️ Back to Menu', 'menu')]  // Ensure the action for back to menu is 'menu'
         ])
       );
     } catch (error) {
