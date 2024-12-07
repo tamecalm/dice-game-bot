@@ -1,3 +1,4 @@
+const { Markup } = require('telegraf');  // Import Markup from telegraf
 const User = require('../../models/User');
 
 module.exports = (bot) => {
@@ -12,7 +13,7 @@ module.exports = (bot) => {
       }
 
       if (!user.referralCode) {
-        user.referralCode = `${telegramId}`;
+        user.referralCode = `REF-${telegramId}`;
         await user.save();
       }
 
