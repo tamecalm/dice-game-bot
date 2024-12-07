@@ -76,8 +76,10 @@ Ready to roll the dice and win big? Here's what you can do:
 🛠 **Admin Panel**  
 Manage and monitor your bot with admin tools.`;
 
-        inlineButtons.inline_keyboard.push([
-          Markup.button.callback('🛠 Admin Panel', 'admin'),
+        // Add the admin button to the inline keyboard
+        inlineButtons = Markup.inlineKeyboard([
+          ...inlineButtons.inline_keyboard, // Spread the existing buttons
+          [Markup.button.callback('🛠 Admin Panel', 'admin')], // Add admin button
         ]);
       }
 
