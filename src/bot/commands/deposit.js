@@ -6,18 +6,18 @@ const settings = require('../../config/settings');
 // State management for deposit process
 const userDepositState = {};
 
-// Helper: Fetch exchange rates
-const getExchangeRates = async (baseCurrency) => {
-  try {
-    const response = await axios.get(
-      `https://v6.exchangerate-api.com/v6/caadc6a03dcb054f3906bd95/latest/${baseCurrency}`
-    );
-    return response.data.rates;
-  } catch (error) {
-    console.error('Error fetching exchange rates:', error.message);
-    return null;
-  }
-};
+// Helper: Fetch exchange rates (currently commented out)
+// const getExchangeRates = async (baseCurrency) => {
+//   try {
+//     const response = await axios.get(
+//       `https://v6.exchangerate-api.com/v6/caadc6a03dcb054f3906bd95/latest/${baseCurrency}`
+//     );
+//     return response.data.rates;
+//   } catch (error) {
+//     console.error('Error fetching exchange rates:', error.message);
+//     return null;
+//   }
+// };
 
 // Inline button handler
 module.exports = (bot) => {
@@ -35,21 +35,20 @@ module.exports = (bot) => {
       userDepositState[userId] = {
         step: 1,
         amount: null,
-        currency: user.currency || settings.defaultCurrency,
+        currency: 'USD', // Default currency set to USD
       };
 
       return ctx.reply(
         `💳 Welcome to the deposit process!\n` +
           `Please enter the amount you'd like to deposit.\n` +
-          `Note: Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
+          `Note: Minimum deposit is ${settings.minimumDeposit} USD.`
       );
     } catch (error) {
-      console.error('Error initiating deposit process:', error.message);
+      console.error('Error in deposit initialization:', error.stack);
       return ctx.reply('❌ An error occurred while starting the deposit process. Please try again later.');
     }
   });
 
-  // Handle text input during deposit process
   bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
     if (!userDepositState[userId]) return; // Exit if user is not in deposit flow
@@ -63,18 +62,16 @@ module.exports = (bot) => {
           // Validate deposit amount
           const amount = parseFloat(userInput);
           if (isNaN(amount) || amount < settings.minimumDeposit) {
-            return ctx.reply(
-              `❌ Invalid amount. Minimum deposit is ${settings.minimumDeposit} ${settings.defaultCurrency}.`
-            );
+            return ctx.reply(`❌ Invalid amount. Minimum deposit is ${settings.minimumDeposit} USD.`);
           }
 
-          // Fetch exchange rates
-          const exchangeRates = await getExchangeRates(settings.defaultCurrency);
-          if (!exchangeRates) {
-            return ctx.reply('❌ Error fetching exchange rates. Please try again later.');
-          }
+          // Commented out exchange rate logic
+          // const exchangeRates = await getExchangeRates('USD');
+          // if (!exchangeRates) {
+          //   return ctx.reply('❌ Error fetching exchange rates. Please try again later.');
+          // }
+          // const exchangeRate = exchangeRates[state.currency] || 1;
 
-          const exchangeRate = exchangeRates[state.currency] || 1;
           const vatRate = settings.vatRate / 100;
           const vatFee = (amount * vatRate).toFixed(2);
           const totalAmount = (parseFloat(amount) + parseFloat(vatFee)).toFixed(2);
@@ -84,9 +81,9 @@ module.exports = (bot) => {
 
           return ctx.reply(
             `🧾 <b>Deposit Details:</b>\n` +
-              `- Amount: ${state.currency} ${amount}\n` +
-              `- VAT (${settings.vatRate}%): ${state.currency} ${vatFee}\n` +
-              `- Total: ${state.currency} ${totalAmount}\n\n` +
+              `- Amount: USD ${amount}\n` +
+              `- VAT (${settings.vatRate}%): USD ${vatFee}\n` +
+              `- Total: USD ${totalAmount}\n\n` +
               `✅ Confirm payment by typing "YES" or cancel with "CANCEL".`,
             { parse_mode: 'HTML' }
           );
@@ -104,26 +101,32 @@ module.exports = (bot) => {
           }
 
           // Initialize Paystack transaction
-          const { amount, totalAmount, currency, vatFee } = state;
-          const transaction = await paystack.transaction.initialize({
-            email: `${userId}@example.com`, // Replace with actual user email in production
-            amount: totalAmount * 100, // Convert to smallest currency unit
-            currency,
-            callback_url: `${process.env.PAYSTACK_CALLBACK_URL}`,
-            metadata: { userId, amount, vatFee },
-          });
+          const { amount, totalAmount, vatFee } = state;
+          try {
+            const transaction = await paystack.transaction.initialize({
+              email: `${userId}@example.com`, // Replace with actual user email in production
+              amount: totalAmount * 100, // Convert to smallest currency unit
+              currency: 'USD',
+              callback_url: `${process.env.PAYSTACK_CALLBACK_URL}`,
+              metadata: { userId, amount, vatFee },
+            });
 
-          // Clear user state after payment initialization
-          delete userDepositState[userId];
+            // Clear user state after payment initialization
+            delete userDepositState[userId];
 
-          return ctx.reply(
-            `✅ <b>Payment Summary:</b>\n` +
-              `- Amount: ${currency} ${amount}\n` +
-              `- VAT: ${currency} ${vatFee}\n` +
-              `- Total: ${currency} ${totalAmount}\n\n` +
-              `💳 Complete your payment using this link:\n${transaction.data.authorization_url}`,
-            { parse_mode: 'HTML' }
-          );
+            return ctx.reply(
+              `✅ <b>Payment Summary:</b>\n` +
+                `- Amount: USD ${amount}\n` +
+                `- VAT: USD ${vatFee}\n` +
+                `- Total: USD ${totalAmount}\n\n` +
+                `💳 Complete your payment using this link:\n${transaction.data.authorization_url}`,
+              { parse_mode: 'HTML' }
+            );
+          } catch (paystackError) {
+            console.error('Error initializing Paystack transaction:', paystackError.stack);
+            delete userDepositState[userId];
+            return ctx.reply('❌ Failed to initialize payment. Please try again later.');
+          }
         }
 
         default:
@@ -132,9 +135,18 @@ module.exports = (bot) => {
           return ctx.reply('❌ Something went wrong. Please restart the deposit process.');
       }
     } catch (error) {
-      console.error('Error during deposit process:', error.message);
+      console.error('Error during deposit process:', error.stack);
       delete userDepositState[userId];
-      return ctx.reply('❌ An error occurred. Please restart the deposit process.');
+      return ctx.reply('❌ An unexpected error occurred. Please restart the deposit process.');
     }
+  });
+
+  // Global error handler for uncaught errors in this file
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err.stack || err);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', promise, 'Reason:', reason.stack || reason);
   });
 };
