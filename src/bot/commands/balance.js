@@ -22,8 +22,8 @@ module.exports = (bot) => {
       // Format the balance (remove decimals)
       const formattedBalance = user.balance.toFixed(0); // Removes decimals
 
-      // Use user.currency or fallback to settings.defaultCurrency
-      const currency = user.currency || settings.defaultCurrency;
+      // Use defaultCurrency from settings
+      const currency = settings.defaultCurrency;
 
       // Respond with user's balance
       return ctx.replyWithHTML(
@@ -61,8 +61,8 @@ module.exports = (bot) => {
       // Format the balance (remove decimals)
       const formattedBalance = user.balance.toFixed(0); // Removes decimals
 
-      // Use user.currency or fallback to settings.defaultCurrency
-      const currency = user.currency || settings.defaultCurrency;
+      // Use defaultCurrency from settings
+      const currency = settings.defaultCurrency;
 
       // Respond with user's balance
       return ctx.replyWithHTML(
