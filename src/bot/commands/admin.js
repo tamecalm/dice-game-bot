@@ -4,15 +4,14 @@ const Game = require('../../models/Game');
 const settings = require('../../config/settings');
 
 module.exports = (bot) => {
-  bot.command('🛠 Admin Panel', async (ctx) => {
+  // Handle Admin Panel access
+  bot.action('admin', async (ctx) => {
     try {
-      // Check if the user is the admin
       const adminId = settings.adminIds;
-      if (ctx.from.id.toString() !== adminId) {
-        return ctx.replyWithHTML('❌ <b>Unauthorized access.</b>');
+      if (!adminId.includes(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
       }
 
-      // Build the Admin Panel with inline buttons
       const adminPanel = Markup.inlineKeyboard([
         [Markup.button.callback('📊 Stats', 'admin_stats')],
         [Markup.button.callback('📢 Broadcast', 'admin_broadcast')],
@@ -20,35 +19,25 @@ module.exports = (bot) => {
         [Markup.button.callback('🎮 Manage Games', 'admin_manage_games')],
       ]);
 
-      // Reply with the Admin Panel UI
-      return ctx.replyWithHTML(
+      await ctx.editMessageText(
         `<b>🛠 Welcome to the Admin Panel</b>\n\n` +
           `Select an option below to manage the platform:`,
-        adminPanel
+        { parse_mode: 'HTML', reply_markup: adminPanel }
       );
     } catch (error) {
-      console.error('Error in admin command:', error.message);
-
-      // Handle unexpected errors
-      if (ctx && typeof ctx.reply === 'function') {
-        ctx.replyWithHTML(
-          '❌ <b>An unexpected error occurred.</b>\nPlease try again later.'
-        );
-      }
+      console.error('Error in admin panel handler:', error.message);
+      ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
     }
   });
 
-  // Handle admin actions using callbacks
+  // Handle admin stats action
   bot.action('admin_stats', async (ctx) => {
     try {
-      const callbackData = ctx.callbackQuery.data;
-      const adminId = settings.adminId;
-
-      if (ctx.from.id.toString() !== adminId) {
-        return ctx.answerCbQuery('Unauthorized access.', { show_alert: true });
+      const adminId = settings.adminIds;
+      if (!adminId.includes(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
       }
 
-      // Fetch platform statistics
       const totalUsers = await User.countDocuments();
       const totalGames = await Game.countDocuments();
       const totalDeposits = (
@@ -57,53 +46,48 @@ module.exports = (bot) => {
         ])
       )[0]?.total || 0;
 
-      // Reply with statistics
-      return ctx.editMessageText(
+      await ctx.editMessageText(
         `<b>📊 Platform Statistics:</b>\n\n` +
           `👤 <b>Total Users:</b> ${totalUsers}\n` +
           `🎮 <b>Total Games:</b> ${totalGames}\n` +
           `💰 <b>Total Deposits:</b> ${totalDeposits.toFixed(2)} ${settings.defaultCurrency}`,
-        { parse_mode: 'HTML', reply_markup: ctx.callbackQuery.message.reply_markup }
+        { parse_mode: 'HTML' }
       );
     } catch (error) {
-      console.error('Error handling admin callback:', error.message);
+      console.error('Error handling admin stats:', error.message);
       ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
     }
   });
 
+  // Handle admin broadcast action
   bot.action('admin_broadcast', async (ctx) => {
     try {
-      const callbackData = ctx.callbackQuery.data;
-      const adminId = settings.adminId;
-
-      if (ctx.from.id.toString() !== adminId) {
-        return ctx.answerCbQuery('Unauthorized access.', { show_alert: true });
+      const adminId = settings.adminIds;
+      if (!adminId.includes(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
       }
 
-      // Provide broadcast instructions
-      return ctx.editMessageText(
+      await ctx.editMessageText(
         `<b>📢 Broadcast:</b>\n\n` +
           `Send a message to all users.\n\n` +
           `Reply to this message with your broadcast content.`,
         { parse_mode: 'HTML' }
       );
     } catch (error) {
-      console.error('Error handling admin callback:', error.message);
+      console.error('Error handling admin broadcast:', error.message);
       ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
     }
   });
 
+  // Handle admin manage users action
   bot.action('admin_manage_users', async (ctx) => {
     try {
-      const callbackData = ctx.callbackQuery.data;
-      const adminId = settings.adminId;
-
-      if (ctx.from.id.toString() !== adminId) {
-        return ctx.answerCbQuery('Unauthorized access.', { show_alert: true });
+      const adminId = settings.adminIds;
+      if (!adminId.includes(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
       }
 
-      // Provide user management options
-      return ctx.editMessageText(
+      await ctx.editMessageText(
         `<b>👤 Manage Users:</b>\n\n` +
           `- <code>View User Data</code>\n` +
           `- <code>Block Users</code>\n` +
@@ -112,22 +96,20 @@ module.exports = (bot) => {
         { parse_mode: 'HTML' }
       );
     } catch (error) {
-      console.error('Error handling admin callback:', error.message);
+      console.error('Error handling admin manage users:', error.message);
       ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
     }
   });
 
+  // Handle admin manage games action
   bot.action('admin_manage_games', async (ctx) => {
     try {
-      const callbackData = ctx.callbackQuery.data;
-      const adminId = settings.adminId;
-
-      if (ctx.from.id.toString() !== adminId) {
-        return ctx.answerCbQuery('Unauthorized access.', { show_alert: true });
+      const adminId = settings.adminIds;
+      if (!adminId.includes(ctx.from.id)) {
+        return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
       }
 
-      // Provide game management options
-      return ctx.editMessageText(
+      await ctx.editMessageText(
         `<b>🎮 Manage Games:</b>\n\n` +
           `- <code>View Game Stats</code>\n` +
           `- <code>Cancel Games</code>\n` +
@@ -136,7 +118,7 @@ module.exports = (bot) => {
         { parse_mode: 'HTML' }
       );
     } catch (error) {
-      console.error('Error handling admin callback:', error.message);
+      console.error('Error handling admin manage games:', error.message);
       ctx.answerCbQuery('❌ An unexpected error occurred.', { show_alert: true });
     }
   });
