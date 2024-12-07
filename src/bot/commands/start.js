@@ -24,7 +24,7 @@ module.exports = (bot) => {
       // Find the user in the database or create a new one
       let user = await User.findOne({ telegramId });
       let welcomeMessage;
-      let inlineButtons;
+      let inlineButtonsArray;
 
       if (!user) {
         user = new User({ telegramId, username });
@@ -43,11 +43,11 @@ Here's what you can do:
 👥 **Refer Friends**  
 🏦 **Withdraw Your Winnings**`;
 
-        inlineButtons = Markup.inlineKeyboard([
+        inlineButtonsArray = [
           [Markup.button.callback('💰 Deposit', 'deposit'), Markup.button.callback('🎮 Play', 'play')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
           [Markup.button.callback('👥 Referral', 'referral')],
-        ]);
+        ];
       } else {
         console.log(`Returning user: ${username} (ID: ${telegramId})`);
 
@@ -62,11 +62,11 @@ Ready to roll the dice and win big? Here's what you can do:
 👥 **Refer Friends for Rewards**  
 🏦 **Withdraw Your Winnings**`;
 
-        inlineButtons = Markup.inlineKeyboard([
+        inlineButtonsArray = [
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
           [Markup.button.callback('👥 Referral', 'referral')],
-        ]);
+        ];
       }
 
       // Add admin options if the user is an admin
@@ -76,12 +76,12 @@ Ready to roll the dice and win big? Here's what you can do:
 🛠 **Admin Panel**  
 Manage and monitor your bot with admin tools.`;
 
-        // Add the admin button to the inline keyboard
-        inlineButtons = Markup.inlineKeyboard([
-          ...inlineButtons.inline_keyboard, // Spread the existing buttons
-          [Markup.button.callback('🛠 Admin Panel', 'admin')], // Add admin button
-        ]);
+        // Append the admin button to the inline buttons array
+        inlineButtonsArray.push([Markup.button.callback('🛠 Admin Panel', 'admin')]);
       }
+
+      // Create the keyboard with the updated buttons array
+      const inlineButtons = Markup.inlineKeyboard(inlineButtonsArray);
 
       // Send the welcome message with inline buttons
       await ctx.replyWithMarkdown(welcomeMessage, inlineButtons);
