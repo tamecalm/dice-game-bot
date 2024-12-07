@@ -10,6 +10,7 @@ const BINANCE_API_KEY = process.env.BINANCE_API_KEY; // Binance API Key
 const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET; // Binance API Secret
 
 module.exports = (bot) => {
+  // Action handler for the withdrawal option
   bot.action('withdrawal', async (ctx) => {
     try {
       await ctx.answerCbQuery();
@@ -41,7 +42,34 @@ module.exports = (bot) => {
     }
   });
 
-  // Handle withdrawal method selection
+  // Action handler for the "Back to Menu" button
+  bot.action('menu', async (ctx) => {
+    try {
+      const telegramId = ctx.from.id;
+      const user = await User.findOne({ telegramId });
+      if (!user) {
+        return ctx.reply('❌ You are not registered. Use /start to register.');
+      }
+
+      // You can define the main menu options here
+      const mainMenu = Markup.inlineKeyboard([
+        [Markup.button.callback('💳 Withdrawal', 'withdrawal')],
+        [Markup.button.callback('🎮 Play a Game', 'play_game')],
+        [Markup.button.callback('💼 Account Settings', 'settings')],
+      ]);
+
+      await ctx.editMessageText(
+        `<b>Welcome back to the main menu!</b>\n\n` +
+        `Choose an option below to continue.`,
+        { parse_mode: 'HTML', reply_markup: mainMenu }
+      );
+    } catch (error) {
+      console.error('Error in menu handler:', error.message);
+      ctx.reply('❌ An unexpected error occurred. Please try again later.');
+    }
+  });
+
+  // Handle withdrawal method selection (e.g., bank transfer or USDT)
   bot.action(['bank_transfer', 'usdt'], async (ctx) => {
     try {
       await ctx.answerCbQuery();
@@ -135,45 +163,6 @@ module.exports = (bot) => {
       }
     } catch (error) {
       console.error('Error in withdrawal amount input:', error.message);
-      ctx.reply('❌ An unexpected error occurred. Please try again later.');
-    }
-  });
-
-  // Handle bank details input
-  bot.on('message', async (ctx) => {
-    try {
-      const telegramId = ctx.from.id;
-      const userInput = ctx.message.text;
-      const user = await User.findOne({ telegramId });
-
-      if (user && user.state === 'withdrawal_bank_transfer_details') {
-        // Validate and process bank details
-        const [accountNumber, bankName] = userInput.split(',').map((v) => v.trim());
-        if (!accountNumber || !bankName) {
-          return ctx.replyWithHTML(
-            `❌ <b>Invalid bank details format.</b>\nPlease provide details as: <code>Account Number, Bank Name</code>`,
-            Markup.inlineKeyboard([
-              [Markup.button.callback('⬅️ Back to Amount Input', 'withdrawal_bank_transfer')],
-            ])
-          );
-        }
-
-        // Deduct balance and confirm
-        user.balance -= user.tempAmount;
-        user.state = null;
-        await user.save();
-
-        // Notify user of withdrawal success
-        await ctx.replyWithHTML(
-          `✅ <b>Bank Transfer Successful!</b>\n\n` +
-            `🏦 <b>Bank Name:</b> ${bankName}\n` +
-            `🔢 <b>Account Number:</b> ${accountNumber}\n` +
-            `💳 <b>Amount:</b> ${user.tempAmount} NGN\n` +
-            `💰 <b>Remaining Balance:</b> ${user.balance.toFixed(2)} NGN`
-        );
-      }
-    } catch (error) {
-      console.error('Error in bank details input:', error.message);
       ctx.reply('❌ An unexpected error occurred. Please try again later.');
     }
   });
