@@ -1,22 +1,18 @@
 let waitingPlayers = []; // Holds players waiting for a match
 
 module.exports = {
-  joinQueue: (player, gameMode) => {
-    // Add player to the waiting queue with game mode info
-    waitingPlayers.push({ ...player, gameMode });
+  joinQueue: (player) => {
+    // Add player to the waiting queue
+    waitingPlayers.push(player);
 
-    // Filter players with the same game mode
-    const matchingPlayers = waitingPlayers.filter(p => p.gameMode === gameMode);
-
-    // If enough players are available for the selected mode, return them and remove from queue
-    if (matchingPlayers.length >= gameMode) {
-      return matchingPlayers.splice(0, gameMode).map((player) => {
-        waitingPlayers = waitingPlayers.filter(p => p.telegramId !== player.telegramId);
-        return player;
-      });
+    // Check if at least two players are available for a match
+    if (waitingPlayers.length >= 2) {
+      // Match the first two players in the queue and remove them
+      const matchedPlayers = waitingPlayers.splice(0, 2);
+      return matchedPlayers;
     }
 
-    // Otherwise, return null and keep the player in queue
+    // If not enough players, keep the player in the queue
     return null;
   },
 
