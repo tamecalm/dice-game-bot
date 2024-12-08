@@ -2,7 +2,7 @@ const express = require('express');
 const User = require('../models/User');
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
-const bot = require('../bot/commands/bot');  // Import the bot instance
+const bot = require('../bot/commands/bot'); // Import the bot instance
 
 const router = express.Router();
 
@@ -30,9 +30,9 @@ router.post('/paystack-webhook', bodyParser.json(), async (req, res) => {
 
     const { event, data } = req.body;
 
-    // Step 2: Handle charge.success event
-    if (event === 'charge.success') {
-        try {
+    try {
+        // Step 2: Handle `charge.success` (Deposit) event
+        if (event === 'charge.success') {
             const userId = data.metadata.userId; // Metadata contains userId from the transaction
             const currency = data.currency; // Currency used for the transaction
             const vatFee = parseFloat(data.metadata.vatFee || 0); // VAT fee from metadata, default to 0 if missing
@@ -61,16 +61,58 @@ router.post('/paystack-webhook', bodyParser.json(), async (req, res) => {
             await bot.telegram.sendMessage(userId, successMessage);
 
             return res.status(200).send('Transaction processed successfully');
-        } catch (error) {
-            console.error('Error processing webhook:', error.message);
-            console.error('Stack trace:', error.stack);
-            return res.status(500).send('Internal server error');
         }
-    }
 
-    // Step 3: Handle unsupported or unknown events
-    console.warn(`Unhandled event type: ${event}`);
-    return res.status(200).send('Event ignored');
+        // Step 3: Handle `transfer.success` (Withdrawal) event
+        if (event === 'transfer.success') {
+            const { recipient, amount, reference } = data; // Paystack transfer data
+            const user = await User.findOne({ bankAccountNumber: recipient.account_number });
+
+            if (!user) {
+                console.error(`User with account number ${recipient.account_number} not found.`);
+                return res.status(404).send('User not found');
+            }
+
+            // Mark withdrawal as successful
+            user.balance -= amount / 100; // Deduct the withdrawn amount
+            user.tempAmount = null; // Clear temporary amount, if any
+            await user.save();
+
+            console.log(`Withdrawal of ${amount / 100} confirmed for user ${user.telegramId}`);
+
+            // Notify the user
+            const withdrawalMessage = `Your withdrawal of NGN ${amount / 100} has been successfully processed. Your new balance is NGN ${user.balance.toFixed(2)}.`;
+            await bot.telegram.sendMessage(user.telegramId, withdrawalMessage);
+
+            return res.status(200).send('Withdrawal processed successfully');
+        }
+
+        // Step 4: Handle `transfer.failed` (Failed Withdrawal) event
+        if (event === 'transfer.failed') {
+            const { recipient, reason } = data;
+            const user = await User.findOne({ bankAccountNumber: recipient.account_number });
+
+            if (!user) {
+                console.error(`User with account number ${recipient.account_number} not found.`);
+                return res.status(404).send('User not found');
+            }
+
+            console.error(`Withdrawal for user ${user.telegramId} failed: ${reason}`);
+
+            // Notify the user
+            const failedMessage = `Your withdrawal request failed. Reason: ${reason}. Please try again or contact support.`;
+            await bot.telegram.sendMessage(user.telegramId, failedMessage);
+
+            return res.status(200).send('Failed withdrawal handled');
+        }
+
+        // Step 5: Handle unsupported or unknown events
+        console.warn(`Unhandled event type: ${event}`);
+        return res.status(200).send('Event ignored');
+    } catch (error) {
+        console.error('Error processing webhook:', error.message);
+        return res.status(500).send('Internal server error');
+    }
 });
 
 // Fallback route for debugging

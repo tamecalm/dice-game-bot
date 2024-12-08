@@ -1,11 +1,19 @@
 const { joinQueue } = require('../../utils/matchmaking');
 const User = require('../../models/User');
+const Game = require('../../models/Game');
 const settings = require('../../config/settings');
 const { Markup } = require('telegraf');
 
 // Debugging utility
-const logError = (location, error) => {
+const logError = (location, error, ctx) => {
   console.error(`Error at ${location}:`, error.message);
+  if (ctx) {
+    ctx.reply(`❌ Debug: Error at ${location}: ${error.message}`);
+  }
+};
+
+const logDebug = (location, message) => {
+  console.log(`DEBUG: ${location} - ${message}`);
 };
 
 // Function to simulate animated dice roll
@@ -13,30 +21,25 @@ const animatedDiceRoll = async (ctx) => {
   const diceFaces = ['🎲', '🎲', '🎲', '🎲', '🎲', '🎲']; // Animation frames
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Show animation
   for (let i = 0; i < diceFaces.length; i++) {
     await ctx.replyWithHTML(`<b>Rolling...</b> ${diceFaces[i]}`);
-    await delay(500); // 0.5-second delay between frames
+    await delay(500); // 0.5-second delay
   }
 
-  // Final dice result
-  const diceResult = Math.floor(Math.random() * 6) + 1; // Dice roll logic
+  const diceResult = Math.floor(Math.random() * 6) + 1;
   await ctx.replyWithHTML(`<b>Final Result:</b> ${'🎲'.repeat(diceResult)} (Value: ${diceResult})`);
   return diceResult;
 };
 
-// Gameplay logic
 const startGame = async (ctx, players) => {
   try {
     const [player1, player2] = players;
 
     await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${player1.username}</b> vs 👤 <b>${player2.username}</b>`);
 
-    // Simulate dice rolls for both players
     const player1Roll = await animatedDiceRoll(ctx);
     const player2Roll = await animatedDiceRoll(ctx);
 
-    // Determine the winner
     let resultMessage;
     if (player1Roll > player2Roll) {
       resultMessage = `🎉 <b>${player1.username}</b> wins with a roll of ${player1Roll} against ${player2Roll}!`;
@@ -54,16 +57,14 @@ const startGame = async (ctx, players) => {
 
     await ctx.replyWithHTML(resultMessage);
   } catch (error) {
-    logError('Game Logic', error);
-    ctx.reply('❌ An error occurred during the game. Please try again later.');
+    logError('Game Logic', error, ctx);
   }
 };
 
 const playCommand = (bot) => {
-  // Inline button handler for "Play" action
   bot.action('play', async (ctx) => {
     try {
-      await ctx.answerCbQuery(); // Notify user
+      await ctx.answerCbQuery();
       const telegramId = ctx.from.id;
 
       const user = await User.findOne({ telegramId });
@@ -71,12 +72,10 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
-      // Check if user is already in a game
       if (user.state === 'in-game') {
         return ctx.reply('❌ You are already in a game. Please finish your current game first.');
       }
 
-      // Update user state to 'betting'
       user.state = 'betting';
       await user.save();
 
@@ -84,20 +83,18 @@ const playCommand = (bot) => {
         `💰 Enter your bet amount (min: ${settings.minBet}, max: ${settings.maxBet}):\n\n` +
           `Your current balance: ${user.balance}`,
         Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Back to Menu', 'menu')], // Inline button to go back to menu
+          [Markup.button.callback('⬅️ Back to Menu', 'menu')],
         ])
       );
     } catch (error) {
-      logError('Inline button handler', error);
-      ctx.reply('❌ An error occurred while starting the game. Please try again.');
+      logError('Inline button handler', error, ctx);
     }
   });
 
   bot.command('play', async (ctx) => {
-    const telegramId = ctx.from.id;
-    const username = ctx.from.username || 'Anonymous';
-
     try {
+      const telegramId = ctx.from.id;
+
       const user = await User.findOne({ telegramId });
       if (!user) {
         return ctx.reply('❌ You are not registered. Use /start to register.');
@@ -112,50 +109,44 @@ const playCommand = (bot) => {
 
       return ctx.reply(
         `💰 Enter your bet amount (min: ${settings.minBet}, max: ${settings.maxBet}):\n\n` +
-          `Your current balance: ${user.balance}`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Back to Menu', 'menu')], // Inline button to go back to menu
-        ])
+          `Your current balance: ${user.balance}`
       );
     } catch (error) {
-      logError('/play command', error);
-      ctx.reply('❌ An unexpected error occurred. Please try again later.');
+      logError('/play command', error, ctx);
     }
   });
 
   bot.on('message', async (ctx) => {
-    const telegramId = ctx.from.id;
-    const userInput = ctx.message.text;
-
     try {
+      const telegramId = ctx.from.id;
+      const userInput = ctx.message.text;
+
+      logDebug('Message Event', `User input: ${userInput}`);
+
       const user = await User.findOne({ telegramId });
-      if (!user || user.state !== 'betting') return;
+      if (!user || user.state !== 'betting') {
+        logDebug('Message Event', 'User is not in a betting state.');
+        return;
+      }
 
       const betAmount = parseFloat(userInput);
 
-      if (isNaN(betAmount) || betAmount < settings.minBet || betAmount > settings.maxBet) {
-        user.state = null;
-        await user.save();
-        return ctx.reply(
-          `❌ Invalid bet amount. Please enter an amount between ${settings.minBet} and ${settings.maxBet}.`,
-          Markup.inlineKeyboard([
-            [Markup.button.callback('⬅️ Back to Menu', 'menu')], // Inline button to go back to menu
-          ])
-        );
+      if (isNaN(betAmount)) {
+        logDebug('Betting Validation', 'Input is not a valid number.');
+        return ctx.reply(`❌ Invalid bet. Please enter a numeric value.`);
       }
 
-      const vatFee = parseFloat((betAmount * settings.vatRate) / 100).toFixed(2);
-      const totalBet = parseFloat(betAmount) + parseFloat(vatFee);
+      if (betAmount < settings.minBet || betAmount > settings.maxBet) {
+        logDebug('Betting Validation', `Bet out of range: ${betAmount}`);
+        return ctx.reply(`❌ Invalid bet amount. Please enter an amount between ${settings.minBet} and ${settings.maxBet}.`);
+      }
+
+      const vatFee = (betAmount * settings.vatRate) / 100;
+      const totalBet = betAmount + vatFee;
 
       if (totalBet > user.balance) {
-        user.state = null;
-        await user.save();
-        return ctx.reply(
-          `❌ Insufficient balance! Your balance: ${user.balance}. Total needed: ${totalBet}.`,
-          Markup.inlineKeyboard([
-            [Markup.button.callback('⬅️ Back to Menu', 'menu')], // Inline button to go back to menu
-          ])
-        );
+        logDebug('Balance Check', `Insufficient balance: ${user.balance}, Needed: ${totalBet}`);
+        return ctx.reply(`❌ Insufficient balance! Your balance: ${user.balance}. Total needed: ${totalBet}.`);
       }
 
       user.balance -= totalBet;
@@ -168,22 +159,22 @@ const playCommand = (bot) => {
           `⏳ Searching for opponents...`
       );
 
-      const players = joinQueue({ telegramId, username });
+      const players = joinQueue({ telegramId, username: ctx.from.username });
+      logDebug('Matchmaking', `Players in queue: ${players.length}`);
+
       if (players.length >= 2) {
         ctx.reply('✅ Match found! Starting the game...');
-        await startGame(ctx, players); // Start the game
+        await startGame(ctx, players);
       } else {
         ctx.reply('⏳ Waiting for more players to join...');
       }
     } catch (error) {
-      logError('Betting and matchmaking', error);
-      ctx.reply('❌ An error occurred during the game setup. Please try again later.');
+      logError('Message Handler', error, ctx);
     }
   });
 
   bot.catch((error, ctx) => {
-    logError('Global Error Handler', error);
-    ctx.reply('❌ A critical error occurred. Please contact support.');
+    logError('Global Error Handler', error, ctx);
   });
 };
 
