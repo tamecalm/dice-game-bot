@@ -19,7 +19,7 @@ module.exports = (bot) => {
         [Markup.button.callback('📢 Broadcast', 'admin_broadcast')],
         [Markup.button.callback('👤 Manage Users', 'admin_manage_users')],
         [Markup.button.callback('🎮 Manage Games', 'admin_manage_games')],
-        [Markup.button.callback('🔙 Back to Menu', 'menu')] // Added back-to-menu button
+        [Markup.button.callback('🔙 Back to Menu', 'menu')] // "Back to Menu" button
       ]);
 
       await ctx.editMessageText(
@@ -81,6 +81,9 @@ module.exports = (bot) => {
         `👤 <b>Total Users:</b> ${totalUsers}\n` +
         `🎮 <b>Total Games:</b> ${totalGames}\n` +
         `💰 <b>Total Deposits:</b> ${totalDeposits.toFixed(2)} ${settings.defaultCurrency}`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Admin Panel', 'admin')]
+        ]),
         { parse_mode: 'HTML' }
       );
     } catch (error) {
@@ -101,6 +104,9 @@ module.exports = (bot) => {
         `<b>📢 Broadcast:</b>\n\n` +
         `Send a message to all users.\n\n` +
         `Reply to this message with your broadcast content.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Admin Panel', 'admin')]
+        ]),
         { parse_mode: 'HTML' }
       );
     } catch (error) {
@@ -123,6 +129,9 @@ module.exports = (bot) => {
         `- <code>Block Users</code>\n` +
         `- <code>Reset Balances</code>\n\n` +
         `Use commands for advanced management.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Admin Panel', 'admin')]
+        ]),
         { parse_mode: 'HTML' }
       );
     } catch (error) {
@@ -145,6 +154,9 @@ module.exports = (bot) => {
         `- <code>Cancel Games</code>\n` +
         `- <code>Resolve Disputes</code>\n\n` +
         `Select an option for detailed actions.`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🔙 Back to Admin Panel', 'admin')]
+        ]),
         { parse_mode: 'HTML' }
       );
     } catch (error) {
