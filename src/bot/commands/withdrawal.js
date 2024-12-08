@@ -2,10 +2,11 @@ const { Markup } = require('telegraf');
 const axios = require('axios');
 const User = require('../../models/User');
 const settings = require('../../config/settings');
+const paystack = require('paystack-api')(settings.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY);
+
 const MIN_WITHDRAWAL = 100; // Updated minimum withdrawal amount
-const MAX_WITHDRAWAL = 500000; // Maximum withdrawal amount
+const MAX_WITHDRAWAL = 5000; // Maximum withdrawal amount
 const WITHDRAWAL_FEE_PERCENTAGE = 2; // Withdrawal fee percentage
-const PAYSTACK_API_KEY = settings.paystackSecretKey; // Paystack API Key
 
 module.exports = (bot) => {
   // Action handler for the withdrawal option
@@ -83,14 +84,12 @@ module.exports = (bot) => {
           );
         }
 
-        const bankDetailsResponse = await axios.get(
-          `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
-          {
-            headers: { Authorization: `Bearer ${PAYSTACK_API_KEY}` },
-          }
-        );
+        const bankDetailsResponse = await paystack.verification.resolveAccount({
+          account_number: accountNumber,
+          bank_code: bankCode,
+        });
 
-        const { account_name } = bankDetailsResponse.data.data;
+        const { account_name } = bankDetailsResponse.data;
 
         user.bankAccountNumber = accountNumber;
         user.bankCode = bankCode;
