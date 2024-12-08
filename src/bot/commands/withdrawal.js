@@ -6,7 +6,6 @@ const MIN_WITHDRAWAL = 100; // Updated minimum withdrawal amount
 const MAX_WITHDRAWAL = 500000; // Maximum withdrawal amount
 const WITHDRAWAL_FEE_PERCENTAGE = 2; // Withdrawal fee percentage
 const PAYSTACK_API_KEY = process.env.PAYSTACK_SECRET_KEY; // Paystack API Key
-require('dotenv').config(); // Load environment variables
 
 module.exports = (bot) => {
   // Action handler for the withdrawal option
