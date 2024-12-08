@@ -19,8 +19,10 @@ module.exports = (bot) => {
         return ctx.replyWithHTML('❌ <b>You are not registered.</b>\nUse /start to register.');
       }
 
+      // Check if the user is in Nigeria for bank transfer visibility
       const isNigerian = user.country && user.country.toLowerCase() === 'nigeria';
 
+      // Display withdrawal options
       const options = [
         ...(isNigerian ? [[Markup.button.callback('🏦 Bank Transfer (NGN)', 'bank_transfer')]] : []),
         [Markup.button.callback('💸 USDT (Binance)', 'usdt')],
@@ -28,7 +30,8 @@ module.exports = (bot) => {
       ];
 
       await ctx.replyWithHTML(
-        `💳 <b>Withdrawal Options</b>\n\nPlease select your preferred withdrawal method:`,
+        `💳 <b>Withdrawal Options</b>\n\n` +
+          `Please select your preferred withdrawal method:`,
         Markup.inlineKeyboard(options)
       );
     } catch (error) {
@@ -53,7 +56,8 @@ module.exports = (bot) => {
       ]);
 
       await ctx.editMessageText(
-        `<b>Welcome back to the main menu!</b>\n\nChoose an option below to continue.`,
+        `<b>Welcome back to the main menu!</b>\n\n` +
+        `Choose an option below to continue.`,
         { parse_mode: 'HTML', reply_markup: mainMenu }
       );
     } catch (error) {
@@ -75,13 +79,10 @@ module.exports = (bot) => {
 
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
-      if (!user) {
-        return ctx.replyWithHTML('❌ <b>You are not registered.</b>\nUse /start to register.');
-      }
+      if (!user) return;
 
       user.state = `withdrawal_${method}`;
       await user.save();
-      console.log(`User state updated to: ${user.state}`); // Debug log
 
       await ctx.replyWithHTML(
         `🔢 <b>Enter the amount you wish to withdraw (${methods[method]}):</b>\n` +
@@ -104,19 +105,28 @@ module.exports = (bot) => {
   bot.on('message', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
-      const userInput = ctx.message.text;
+      const userInput = ctx.message.text; // User's input from the message
       const user = await User.findOne({ telegramId });
-      if (!user || !user.state || !user.state.startsWith('withdrawal_')) {
-        console.log('No valid withdrawal state for user.'); // Debug log
+
+      if (!user) {
+        console.log('User not found.'); // Debug log
         return;
       }
 
-      console.log(`User input: ${userInput}`); // Debug log
-      const method = user.state.split('_')[1];
-      const withdrawalAmount = parseFloat(userInput);
+      if (!user.state || !user.state.startsWith('withdrawal_')) {
+        console.log(`No valid withdrawal state for user: ${user.state}`); // Debug log
+        return;
+      }
 
+      console.log(`User state: ${user.state}`); // Debug log
+      console.log(`User input: ${userInput}`); // Debug log
+
+      const method = user.state.split('_')[1]; // Extract the withdrawal method
+      const withdrawalAmount = parseFloat(userInput); // Parse the amount
+
+      // Validate the withdrawal amount
       if (isNaN(withdrawalAmount) || withdrawalAmount < MIN_WITHDRAWAL || withdrawalAmount > MAX_WITHDRAWAL) {
-        console.log(`Invalid withdrawal amount: ${withdrawalAmount}`); // Debug log
+        console.log(`Invalid amount entered: ${withdrawalAmount}`); // Debug log
         return ctx.replyWithHTML(
           `❌ <b>Invalid amount.</b>\nPlease enter a value between ${MIN_WITHDRAWAL} and ${MAX_WITHDRAWAL} NGN.`,
           Markup.inlineKeyboard([
@@ -125,6 +135,7 @@ module.exports = (bot) => {
         );
       }
 
+      // Calculate fee and final amount
       const fee = (withdrawalAmount * WITHDRAWAL_FEE_PERCENTAGE) / 100;
       const finalAmount = withdrawalAmount - fee;
 
@@ -138,53 +149,33 @@ module.exports = (bot) => {
         );
       }
 
+      // Save temporary withdrawal amount and advance state
       user.tempAmount = withdrawalAmount;
-      user.state = `withdrawal_${method}_details`;
+      user.state = `withdrawal_${method}_details`; // Update state for next step
       await user.save();
-      console.log(`User state updated for withdrawal details: ${user.state}`); // Debug log
+      console.log(`User state updated for details: ${user.state}`); // Debug log
 
+      // Notify user and proceed to details collection (e.g., bank details for bank transfer)
       if (method === 'bank_transfer') {
-        const transferRecipient = {
-          type: 'nuban',
-          name: user.name,
-          account_number: user.bankAccountNumber,
-          bank_code: user.bankCode,
-          currency: 'NGN',
-        };
-
-        const recipientResponse = await axios.post(
-          'https://api.paystack.co/transferrecipient',
-          transferRecipient,
-          { headers: { Authorization: `Bearer ${PAYSTACK_API_KEY}` } }
+        await ctx.replyWithHTML(
+          `🏦 <b>Bank Transfer Details Required</b>\n\n` +
+            `You are withdrawing <b>${finalAmount.toFixed(2)} NGN</b> (after ${WITHDRAWAL_FEE_PERCENTAGE}% fee).\n` +
+            `Please provide the following details:\n\n` +
+            `1. Account Name\n2. Account Number\n3. Bank Name\n\n` +
+            `Type your details in the format: *Account Name, Account Number, Bank Name*`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Back to Withdrawal Methods', 'withdrawal')],
+          ])
         );
-
-        const transfer = {
-          source: 'balance',
-          amount: finalAmount * 100, // Convert to kobo
-          recipient: recipientResponse.data.data.recipient_code,
-          reason: 'Withdrawal from Dice Game Bot',
-        };
-
-        const transferResponse = await axios.post('https://api.paystack.co/transfer', transfer, {
-          headers: { Authorization: `Bearer ${PAYSTACK_API_KEY}` },
-        });
-
-        if (transferResponse.data.status) {
-          user.balance -= withdrawalAmount;
-          user.tempAmount = null;
-          user.state = null;
-          await user.save();
-          console.log('Withdrawal successful.'); // Debug log
-
-          return ctx.replyWithHTML(
-            `✅ <b>Withdrawal Successful!</b>\n\n` +
-              `💰 Amount: ${finalAmount.toFixed(2)} NGN (after ${WITHDRAWAL_FEE_PERCENTAGE}% fee)\n` +
-              `📋 Bank Transfer via Paystack initiated successfully.`
-          );
-        } else {
-          console.error('Paystack transfer failed:', transferResponse.data); // Debug log
-          return ctx.replyWithHTML(`❌ <b>Withdrawal Failed!</b>\n\nPlease try again later.`);
-        }
+      } else if (method === 'usdt') {
+        await ctx.replyWithHTML(
+          `💸 <b>USDT Withdrawal</b>\n\n` +
+            `You are withdrawing <b>${finalAmount.toFixed(2)} NGN</b> (after ${WITHDRAWAL_FEE_PERCENTAGE}% fee).\n` +
+            `Please provide your USDT wallet address.\n\nType your wallet address to continue.`,
+          Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Back to Withdrawal Methods', 'withdrawal')],
+          ])
+        );
       }
     } catch (error) {
       console.error('Error in withdrawal process:', error.message);
