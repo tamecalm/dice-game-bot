@@ -5,9 +5,7 @@ const settings = require('../../config/settings');
 const MIN_WITHDRAWAL = 100; // Updated minimum withdrawal amount
 const MAX_WITHDRAWAL = 500000; // Maximum withdrawal amount
 const WITHDRAWAL_FEE_PERCENTAGE = 2; // Withdrawal fee percentage
-const EXCHANGE_RATE_API_KEY = process.env.EXCHANGE_RATE_API_KEY; // Exchange Rate API Key
-const BINANCE_API_KEY = process.env.BINANCE_API_KEY; // Binance API Key
-const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET; // Binance API Secret
+const PAYSTACK_API_KEY = process.env.PAYSTACK_API_KEY; // Paystack API Key
 
 module.exports = (bot) => {
   // Action handler for the withdrawal option
@@ -51,7 +49,6 @@ module.exports = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
-      // You can define the main menu options here
       const mainMenu = Markup.inlineKeyboard([
         [Markup.button.callback('💳 Withdrawal', 'withdrawal')],
         [Markup.button.callback('🎮 Play a Game', 'play_game')],
@@ -69,7 +66,7 @@ module.exports = (bot) => {
     }
   });
 
-  // Handle withdrawal method selection (e.g., bank transfer or USDT)
+  // Handle withdrawal method selection
   bot.action(['bank_transfer', 'usdt'], async (ctx) => {
     try {
       await ctx.answerCbQuery();
@@ -104,7 +101,7 @@ module.exports = (bot) => {
     }
   });
 
-  // Handle withdrawal amount input
+  // Handle withdrawal amount input and Paystack processing
   bot.on('message', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
@@ -142,27 +139,49 @@ module.exports = (bot) => {
       await user.save();
 
       if (method === 'bank_transfer') {
-        // Prompt user for bank details
-        await ctx.replyWithHTML(
-          `🏦 <b>Enter your bank account details:</b>\n\n` +
-            `Format: <code>Account Number, Bank Name</code>\n\n` +
-            `📋 Example: <code>1234567890, First Bank</code>`,
-          Markup.inlineKeyboard([
-            [Markup.button.callback('⬅️ Back to Amount Input', 'withdrawal_bank_transfer')],
-          ])
+        // Proceed with Paystack transfer
+        const transferRecipient = {
+          type: 'nuban',
+          name: user.name,
+          account_number: user.bankAccountNumber,
+          bank_code: user.bankCode,
+          currency: 'NGN',
+        };
+
+        const recipientResponse = await axios.post(
+          'https://api.paystack.co/transferrecipient',
+          transferRecipient,
+          { headers: { Authorization: `Bearer ${PAYSTACK_API_KEY}` } }
         );
-      } else if (method === 'usdt') {
-        // Prompt user for USDT address
-        await ctx.replyWithHTML(
-          `💸 <b>Enter your USDT Wallet Address:</b>\n\n` +
-            `📋 Ensure your address is correct to avoid loss of funds.`,
-          Markup.inlineKeyboard([
-            [Markup.button.callback('⬅️ Back to Amount Input', 'withdrawal_usdt')],
-          ])
-        );
+
+        const transfer = {
+          source: 'balance',
+          amount: finalAmount * 100, // Convert to kobo
+          recipient: recipientResponse.data.data.recipient_code,
+          reason: 'Withdrawal from Dice Game Bot',
+        };
+
+        const transferResponse = await axios.post('https://api.paystack.co/transfer', transfer, {
+          headers: { Authorization: `Bearer ${PAYSTACK_API_KEY}` },
+        });
+
+        if (transferResponse.data.status) {
+          user.balance -= withdrawalAmount;
+          user.tempAmount = null;
+          user.state = null;
+          await user.save();
+
+          return ctx.replyWithHTML(
+            `✅ <b>Withdrawal Successful!</b>\n\n` +
+              `💰 Amount: ${finalAmount.toFixed(2)} NGN (after ${WITHDRAWAL_FEE_PERCENTAGE}% fee)\n` +
+              `📋 Bank Transfer via Paystack initiated successfully.`
+          );
+        } else {
+          return ctx.replyWithHTML(`❌ <b>Withdrawal Failed!</b>\n\nPlease try again later.`);
+        }
       }
     } catch (error) {
-      console.error('Error in withdrawal amount input:', error.message);
+      console.error('Error in withdrawal amount input or Paystack processing:', error.message);
       ctx.reply('❌ An unexpected error occurred. Please try again later.');
     }
   });
