@@ -1,4 +1,5 @@
 const User = require('../../models/User');
+const settings = require('../../config/settings'); // Admin IDs stored here
 
 const logError = (location, error, ctx) => {
   console.error(`Error at ${location}:`, error.message);
@@ -7,89 +8,85 @@ const logError = (location, error, ctx) => {
   }
 };
 
-const rollDiceForUser = async (ctx) => {
-  try {
-    // Send dice roll animation to user
-    const diceMessage = await ctx.replyWithDice();
-    const diceValue = diceMessage.dice.value;
+// Cooldown Map
+const cooldowns = new Map();
 
-    // Delete dice message after rolling
-    setTimeout(async () => {
-      try {
-        await ctx.deleteMessage(diceMessage.message_id);
-      } catch (error) {
-        console.warn(`Unable to delete user's dice message:`, error.message);
-      }
-    }, 2000); // Wait for the dice animation to finish before deleting
+// Constants
+const COOLDOWN_PERIOD = 10 * 1000; // 10 seconds
+const DAILY_LOSS_LIMIT = 1000; // Set a daily loss limit
 
-    return diceValue;
-  } catch (error) {
-    logError('rollDiceForUser', error, ctx);
-    return null;
+// Calculate Entry Fee (10%)
+const calculateEntryFee = (betAmount) => Math.ceil(betAmount * 0.10);
+
+// Handle Cooldown
+const handleCooldown = (telegramId) => {
+  const now = Date.now();
+  if (cooldowns.has(telegramId)) {
+    const lastPlayTime = cooldowns.get(telegramId);
+    if (now - lastPlayTime < COOLDOWN_PERIOD) {
+      return false; // Still in cooldown
+    }
   }
+  cooldowns.set(telegramId, now);
+  return true; // Cooldown passed
 };
 
-const rollDiceForBot = async (ctx) => {
-  try {
-    // Simulate bot rolling dice
-    const botDiceMessage = await ctx.replyWithHTML('🤖 Bot is rolling the dice...');
-    const diceValue = Math.floor(Math.random() * 6) + 1; // Simulate bot's dice roll
-
-    // Delete bot's dice roll message
-    setTimeout(async () => {
-      try {
-        await ctx.deleteMessage(botDiceMessage.message_id);
-      } catch (error) {
-        console.warn(`Unable to delete bot's dice message:`, error.message);
-      }
-    }, 2000);
-
-    return diceValue;
-  } catch (error) {
-    logError('rollDiceForBot', error, ctx);
-    return null;
-  }
-};
-
+// Start Game Logic
 const startGame = async (ctx, user) => {
   try {
     const betAmount = 100;
+
+    // Enforce Daily Loss Limit
+    if (user.dailyLoss >= DAILY_LOSS_LIMIT) {
+      return ctx.reply('❌ You have reached your daily loss limit. Try again tomorrow!');
+    }
+
+    const entryFee = calculateEntryFee(betAmount);
+    const playAmount = betAmount - entryFee;
+
+    // Deduct entry fee and bet amount
     user.balance -= betAmount;
+    user.dailyLoss += betAmount; // Track daily losses
     await user.save();
 
-    // Inform the user about game start
+    // Add entry fee to owner account
+    const ownerAccount = await User.findOne({ telegramId: { $in: settings.adminIds } });
+    if (ownerAccount) {
+      ownerAccount.balance += entryFee;
+      await ownerAccount.save();
+    }
+
+    // Notify user of game start
     const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
-    
-    // Wait for user to roll the dice
+
+    // User rolls dice
     const playerRoll = await rollDiceForUser(ctx);
     if (playerRoll === null) return;
 
-    // Delete "Game Start" message after the user rolls
-    try {
-      await ctx.deleteMessage(startMessage.message_id);
-    } catch (error) {
-      console.warn(`Unable to delete 'Game Start' message:`, error.message);
-    }
+    // Delete "Game Start" message
+    await ctx.deleteMessage(startMessage.message_id);
 
-    // Bot rolls the dice (hidden from user)
+    // Bot rolls dice
     const botRoll = await rollDiceForBot(ctx);
     if (botRoll === null) return;
 
-    // Determine the result
+    // Determine result
     let resultMessage;
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
-      user.balance += betAmount * 2;
+      user.balance += playAmount * 2; // Double the play amount for the winner
+      user.dailyLoss -= playAmount; // Adjust daily loss (win back amount)
       await user.save();
     } else if (botRoll > playerRoll) {
       resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!`;
     } else {
       resultMessage = `🤝 It's a draw! Both rolled ${playerRoll}. Bet refunded.`;
-      user.balance += betAmount; // Refund the bet
+      user.balance += betAmount; // Refund full bet
+      user.dailyLoss -= betAmount; // Adjust daily loss (refund amount)
       await user.save();
     }
 
-    // Send final result message with "Play Again" button
+    // Send result message with "Play Again" button
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
@@ -103,12 +100,19 @@ const startGame = async (ctx, user) => {
   }
 };
 
+// Play Command with Cooldown Check
 const playCommand = (bot) => {
   bot.action('play', async (ctx) => {
     try {
       await ctx.answerCbQuery();
 
       const telegramId = ctx.from.id;
+
+      // Check Cooldown
+      if (!handleCooldown(telegramId)) {
+        return ctx.reply('⏳ You must wait 10 seconds before playing again!');
+      }
+
       const user = await User.findOne({ telegramId });
 
       if (!user) {
@@ -128,6 +132,12 @@ const playCommand = (bot) => {
   bot.command('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
+
+      // Check Cooldown
+      if (!handleCooldown(telegramId)) {
+        return ctx.reply('⏳ You must wait 10 seconds before playing again!');
+      }
+
       const user = await User.findOne({ telegramId });
 
       if (!user) {
