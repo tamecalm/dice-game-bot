@@ -1,6 +1,5 @@
 const User = require('../../models/User');
 
-// Debugging utilities
 const logError = (location, error, ctx) => {
   console.error(`Error at ${location}:`, error.message);
   if (ctx) {
@@ -8,59 +7,67 @@ const logError = (location, error, ctx) => {
   }
 };
 
-const logDebug = (location, message) => {
-  console.log(`DEBUG: ${location} - ${message}`);
-};
-
-// Function to roll a dice and send animation to user or bot
-const rollDiceForUser = async (ctx, userType) => {
+const rollDiceForUser = async (ctx) => {
   try {
-    if (userType === 'user') {
-      // Send dice roll animation to user only
-      const result = await ctx.replyWithDice();
-      return result.dice.value;
-    } else {
-      // Bot rolls the dice but does not send it to the user
-      await ctx.replyWithDice({ reply_markup: { hide_keyboard: true } });
-      return Math.floor(Math.random() * 6) + 1; // Simulating bot's dice roll
-    }
+    // Send dice roll animation to user
+    const diceMessage = await ctx.replyWithDice();
+    const diceValue = diceMessage.dice.value;
+
+    // Delete dice message after rolling
+    setTimeout(async () => {
+      await ctx.deleteMessage(diceMessage.message_id);
+    }, 2000); // Wait for the dice animation to finish before deleting
+
+    return diceValue;
   } catch (error) {
     logError('rollDiceForUser', error, ctx);
     return null;
   }
 };
 
-// Function to start the game
+const rollDiceForBot = async (ctx) => {
+  try {
+    // Send bot's dice roll animation (hidden from user)
+    const botDiceMessage = await ctx.replyWithHTML('🤖 Bot is rolling the dice...');
+    const diceValue = Math.floor(Math.random() * 6) + 1; // Simulate bot's dice roll
+
+    // Delete the bot's dice roll message after a delay
+    setTimeout(async () => {
+      await ctx.deleteMessage(botDiceMessage.message_id);
+    }, 2000);
+
+    return diceValue;
+  } catch (error) {
+    logError('rollDiceForBot', error, ctx);
+    return null;
+  }
+};
+
 const startGame = async (ctx, user) => {
   try {
-    logDebug('startGame', `Starting game for user: ${user.username}`);
-
     const betAmount = 100;
     user.balance -= betAmount;
     await user.save();
 
-    // Send initial message for the game start
-    let gameMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
-
+    // Inform the user about game start
+    const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
+    
     // Wait for user to roll the dice
-    const playerRoll = await rollDiceForUser(ctx, 'user');
-    if (playerRoll === null) return; // Handle potential errors in dice roll
+    const playerRoll = await rollDiceForUser(ctx);
+    if (playerRoll === null) return;
 
-    // Delete the "Game Started" message after the user rolls their dice
-    await ctx.deleteMessage(gameMessage.message_id);
+    // Delete "Game Start" message after the user rolls
+    await ctx.deleteMessage(startMessage.message_id);
 
-    // Edit the message to show the bot is rolling
-    gameMessage = await ctx.replyWithHTML('🤖 <b>Bot</b> is rolling the dice...');
+    // Bot rolls the dice (hidden from user)
+    const botRoll = await rollDiceForBot(ctx);
+    if (botRoll === null) return;
 
-    // Bot rolls the dice (but the user will not see it)
-    const botRoll = await rollDiceForUser(ctx, 'bot');
-    if (botRoll === null) return; // Handle potential errors in dice roll
-
-    // After both dice are rolled, show the result
+    // Determine the result
     let resultMessage;
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
-      user.balance += betAmount * 2; // Double the bet amount
+      user.balance += betAmount * 2;
       await user.save();
     } else if (botRoll > playerRoll) {
       resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!`;
@@ -70,26 +77,23 @@ const startGame = async (ctx, user) => {
       await user.save();
     }
 
-    // Edit the message with the final result
+    // Send final result message with "Play Again" button
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
           [{ text: 'Play Again', callback_data: 'play' }],
-          [{ text: 'Back to Menu', callback_data: 'menu' }],
         ],
       },
     };
-    await ctx.editMessageText(resultMessage, resultMarkup);
+    await ctx.replyWithHTML(resultMessage, resultMarkup);
   } catch (error) {
     logError('startGame', error, ctx);
   }
 };
 
-// Play command
 const playCommand = (bot) => {
   bot.action('play', async (ctx) => {
     try {
-      logDebug('playCommand', `Received 'play' action from user: ${ctx.from.id}`);
       await ctx.answerCbQuery();
 
       const telegramId = ctx.from.id;
@@ -111,8 +115,6 @@ const playCommand = (bot) => {
 
   bot.command('play', async (ctx) => {
     try {
-      logDebug('playCommand', `Received /play command from user: ${ctx.from.id}`);
-
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
 
@@ -127,38 +129,6 @@ const playCommand = (bot) => {
       await startGame(ctx, user);
     } catch (error) {
       logError('playCommand', error, ctx);
-    }
-  });
-
-  // Handle back to menu action
-  bot.action('menu', async (ctx) => {
-    try {
-      await ctx.answerCbQuery();
-      // Your back to menu handler logic here
-      await ctx.reply('🔙 Returning to menu...');
-    } catch (error) {
-      logError('back_to_menu', error, ctx);
-    }
-  });
-
-  // Handle play again action
-  bot.action('play', async (ctx) => {
-    try {
-      await ctx.answerCbQuery();
-      const telegramId = ctx.from.id;
-      const user = await User.findOne({ telegramId });
-
-      if (!user) {
-        return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      if (user.balance < 100) {
-        return ctx.reply('❌ Insufficient balance! You need at least 100 to play again.');
-      }
-
-      await startGame(ctx, user);
-    } catch (error) {
-      logError('play_again', error, ctx);
     }
   });
 
