@@ -1,4 +1,4 @@
-const { addToQueue, findMatch, } = require('../../utils/matchmaking'); // Modified utility functions for queue management
+const { joinQueue } = require('../../utils/matchmaking');
 const User = require('../../models/User');
 const Game = require('../../models/Game');
 const settings = require('../../config/settings');
@@ -16,9 +16,8 @@ const logDebug = (location, message) => {
   console.log(`DEBUG: ${location} - ${message}`);
 };
 
-// Function to simulate animated dice roll
 const animatedDiceRoll = async (ctx) => {
-  const diceFaces = ['🎲', '🎲', '🎲', '🎲', '🎲', '🎲']; // Animation frames
+  const diceFaces = ['🎲', '🎲', '🎲', '🎲', '🎲', '🎲'];
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   for (let i = 0; i < diceFaces.length; i++) {
@@ -62,35 +61,6 @@ const startGame = async (ctx, players) => {
 };
 
 const playCommand = (bot) => {
-  bot.action('play', async (ctx) => {
-    try {
-      await ctx.answerCbQuery();
-      const telegramId = ctx.from.id;
-
-      const user = await User.findOne({ telegramId });
-      if (!user) {
-        return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      if (user.state === 'in-game') {
-        return ctx.reply('❌ You are already in a game. Please finish your current game first.');
-      }
-
-      user.state = 'betting';
-      await user.save();
-
-      return ctx.reply(
-        `💰 Enter your bet amount (min: ${settings.minBet}, max: ${settings.maxBet}):\n\n` +
-          `Your current balance: ${user.balance}`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Back to Menu', 'menu')],
-        ])
-      );
-    } catch (error) {
-      logError('Inline button handler', error, ctx);
-    }
-  });
-
   bot.command('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
@@ -109,7 +79,7 @@ const playCommand = (bot) => {
 
       return ctx.reply(
         `💰 Enter your bet amount (min: ${settings.minBet}, max: ${settings.maxBet}):\n\n` +
-          `Your current balance: ${user.balance}`
+        `Your current balance: ${user.balance}`
       );
     } catch (error) {
       logError('/play command', error, ctx);
@@ -121,31 +91,19 @@ const playCommand = (bot) => {
       const telegramId = ctx.from.id;
       const userInput = ctx.message.text;
 
-      logDebug('Message Event', `User input: ${userInput}`);
-
       const user = await User.findOne({ telegramId });
-      if (!user || user.state !== 'betting') {
-        logDebug('Message Event', 'User is not in a betting state.');
-        return;
-      }
+      if (!user || user.state !== 'betting') return;
 
       const betAmount = parseFloat(userInput);
 
-      if (isNaN(betAmount)) {
-        logDebug('Betting Validation', 'Input is not a valid number.');
-        return ctx.reply(`❌ Invalid bet. Please enter a numeric value.`);
-      }
-
-      if (betAmount < settings.minBet || betAmount > settings.maxBet) {
-        logDebug('Betting Validation', `Bet out of range: ${betAmount}`);
-        return ctx.reply(`❌ Invalid bet amount. Please enter an amount between ${settings.minBet} and ${settings.maxBet}.`);
+      if (isNaN(betAmount) || betAmount < settings.minBet || betAmount > settings.maxBet) {
+        return ctx.reply(`❌ Invalid bet. Please enter a numeric value between ${settings.minBet} and ${settings.maxBet}.`);
       }
 
       const vatFee = (betAmount * settings.vatRate) / 100;
       const totalBet = betAmount + vatFee;
 
       if (totalBet > user.balance) {
-        logDebug('Balance Check', `Insufficient balance: ${user.balance}, Needed: ${totalBet}`);
         return ctx.reply(`❌ Insufficient balance! Your balance: ${user.balance}. Total needed: ${totalBet}.`);
       }
 
@@ -156,10 +114,10 @@ const playCommand = (bot) => {
 
       ctx.reply(
         `🎲 Bet placed! Bet: ${betAmount}, VAT: ${vatFee}. Remaining balance: ${user.balance}.\n\n` +
-          `⏳ Searching for opponents...`
+        `⏳ Searching for opponents...`
       );
 
-      const match = await addToQueue({ telegramId, username: ctx.from.username, bet: betAmount });
+      const match = joinQueue({ telegramId, username: ctx.from.username, bet: betAmount });
 
       if (match) {
         ctx.reply('✅ Match found! Starting the game...');
@@ -170,10 +128,6 @@ const playCommand = (bot) => {
     } catch (error) {
       logError('Message Handler', error, ctx);
     }
-  });
-
-  bot.catch((error, ctx) => {
-    logError('Global Error Handler', error, ctx);
   });
 };
 

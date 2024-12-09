@@ -25,7 +25,7 @@ module.exports = {
       }
     }, TIMEOUT_MS);
 
-    return [];
+    return null;
   },
 
   leaveQueue: (playerId) => {
