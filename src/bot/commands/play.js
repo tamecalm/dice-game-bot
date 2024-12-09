@@ -1,4 +1,4 @@
-const { joinQueue } = require('../../utils/matchmaking');
+const { addToQueue, findMatch, } = require('../../utils/matchmaking'); // Modified utility functions for queue management
 const User = require('../../models/User');
 const Game = require('../../models/Game');
 const settings = require('../../config/settings');
@@ -150,7 +150,7 @@ const playCommand = (bot) => {
       }
 
       user.balance -= totalBet;
-      user.state = 'in-game';
+      user.state = 'in-queue';
       user.currentBet = betAmount;
       await user.save();
 
@@ -159,12 +159,11 @@ const playCommand = (bot) => {
           `⏳ Searching for opponents...`
       );
 
-      const players = joinQueue({ telegramId, username: ctx.from.username });
-      logDebug('Matchmaking', `Players in queue: ${players.length}`);
+      const match = await addToQueue({ telegramId, username: ctx.from.username, bet: betAmount });
 
-      if (players.length >= 2) {
+      if (match) {
         ctx.reply('✅ Match found! Starting the game...');
-        await startGame(ctx, players);
+        await startGame(ctx, match);
       } else {
         ctx.reply('⏳ Waiting for more players to join...');
       }
