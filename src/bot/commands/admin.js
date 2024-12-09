@@ -3,6 +3,7 @@ const User = require('../../models/User');
 const Game = require('../../models/Game');
 const Admin = require('../../models/Admin');
 const settings = require('../../config/settings');
+const bot = require('./bot');
 const moment = require('moment'); // For time formatting
 
 module.exports = (bot) => {
@@ -143,7 +144,7 @@ module.exports = (bot) => {
   });
 
   // Handle the back to menu action
-  bot.action('menu', async (ctx) => {
+  bot.action('admin', async (ctx) => {
     const menuKeyboard = Markup.inlineKeyboard([
       [Markup.button.callback('💼 Admin Panel', 'admin')]
     ]);
