@@ -20,8 +20,8 @@ const rollDiceForUser = async (ctx, userType) => {
       const result = await ctx.replyWithDice();
       return result.dice.value;
     } else {
-      // Send dice roll animation to bot (computer) only
-      const result = await ctx.replyWithDice();
+      // Bot rolls the dice but does not send it to the user
+      const result = await ctx.replyWithDice({ reply_markup: { hide_keyboard: true } });
       return result.dice.value;
     }
   } catch (error) {
@@ -45,7 +45,7 @@ const startGame = async (ctx, user) => {
     const playerRoll = await rollDiceForUser(ctx, 'user');
     if (playerRoll === null) return; // Handle potential errors in dice roll
 
-    // Bot rolls the dice (shown to bot only)
+    // Bot rolls the dice (but the user will not see it)
     await ctx.replyWithHTML(`🤖 <b>Bot</b> is rolling the dice!`);
     const botRoll = await rollDiceForUser(ctx, 'bot');
     if (botRoll === null) return; // Handle potential errors in dice roll
@@ -64,7 +64,15 @@ const startGame = async (ctx, user) => {
       await user.save();
     }
 
-    await ctx.replyWithHTML(resultMessage);
+    // Send result and "Back to Menu" button
+    const resultMarkup = {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Back to Menu', callback_data: 'menu' }],
+        ],
+      },
+    };
+    await ctx.replyWithHTML(resultMessage, resultMarkup);
   } catch (error) {
     logError('startGame', error, ctx);
   }
@@ -112,6 +120,17 @@ const playCommand = (bot) => {
       await startGame(ctx, user);
     } catch (error) {
       logError('playCommand', error, ctx);
+    }
+  });
+
+  // Handle back to menu action
+  bot.action('back_to_menu', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      // Your back to menu handler logic here
+      await ctx.reply('🔙 Returning to menu...');
+    } catch (error) {
+      logError('back_to_menu', error, ctx);
     }
   });
 
