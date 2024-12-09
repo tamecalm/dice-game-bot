@@ -34,15 +34,18 @@ bot.action('menu', async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Escape special characters for MarkdownV2 compatibility
-    const userName = ctx.from.first_name.replace(/([_*[\]()~>#|{}.!])/g, '\\$1');
+    // Escape special characters in the entire message, including dynamic content
+    const message = `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
+                    `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
+                    `\n\n` +
+                    `*Explore the options below and make your choice:*`; // Additional stylistic choice
 
-    // Welcome message with a personalized touch
+    // Escape all special characters for MarkdownV2
+    const escapedMessage = message.replace(/([_*[\]()~>#|{}.!])/g, '\\$1');
+
+    // Send the escaped message
     await ctx.reply(
-      `**👋 Welcome back, ${userName}!**\n\n` + // Personalized greeting
-      `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
-      `\n\n` +
-      `*Explore the options below and make your choice:*`, // Additional stylistic choice
+      escapedMessage,
       {
         parse_mode: 'MarkdownV2', // Use MarkdownV2 for better compatibility
         reply_markup: Markup.inlineKeyboard([  // Inline buttons
@@ -57,6 +60,7 @@ bot.action('menu', async (ctx) => {
     ctx.reply('❌ An unexpected error occurred. Please try again later.');
   }
 });
+
 
 // Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
