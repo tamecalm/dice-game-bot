@@ -12,13 +12,20 @@ const logDebug = (location, message) => {
   console.log(`DEBUG: ${location} - ${message}`);
 };
 
-// Function to roll a dice
-const rollDice = async (ctx) => {
+// Function to roll a dice and send animation to user or bot
+const rollDiceForUser = async (ctx, userType) => {
   try {
-    const result = await ctx.replyWithDice();
-    return result.dice.value;
+    if (userType === 'user') {
+      // Send dice roll animation to user only
+      const result = await ctx.replyWithDice();
+      return result.dice.value;
+    } else {
+      // Send dice roll animation to bot (computer) only
+      const result = await ctx.replyWithDice();
+      return result.dice.value;
+    }
   } catch (error) {
-    logError('rollDice', error, ctx);
+    logError('rollDiceForUser', error, ctx);
     return null;
   }
 };
@@ -34,16 +41,16 @@ const startGame = async (ctx, user) => {
 
     await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
 
-    // Player rolls the dice
-    const playerRoll = await rollDice(ctx);
+    // Player rolls the dice (shown to user only)
+    const playerRoll = await rollDiceForUser(ctx, 'user');
     if (playerRoll === null) return; // Handle potential errors in dice roll
 
-    // Bot rolls the dice
+    // Bot rolls the dice (shown to bot only)
     await ctx.replyWithHTML(`🤖 <b>Bot</b> is rolling the dice!`);
-    const botRoll = await rollDice(ctx);
+    const botRoll = await rollDiceForUser(ctx, 'bot');
     if (botRoll === null) return; // Handle potential errors in dice roll
 
-    // Determine winner
+    // After both dice are rolled, display results
     let resultMessage;
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
