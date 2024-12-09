@@ -5,13 +5,11 @@ const settings = require('../../config/settings');
 
 // Flutterwave API keys
 const FLUTTERWAVE_SECRET_KEY = settings.flutterwaveSecretKey || process.env.FLUTTERWAVE_SECRET_KEY;
-const FLUTTERWAVE_PUBLIC_KEY = settings.flutterwavePublicKey || process.env.FLUTTERWAVE_PUBLIC_KEY;
 
 const DAILY_WITHDRAWAL_LIMIT = 100; // Default withdrawal amount
 const VAT_PERCENTAGE = 7.5; // VAT fee percentage
 
 module.exports = (bot) => {
-  // Withdrawal action handler
   bot.action('withdrawal', async (ctx) => {
     try {
       await ctx.answerCbQuery();
@@ -32,64 +30,26 @@ module.exports = (bot) => {
         );
       }
 
-      // Ask for bank details
-      await ctx.replyWithHTML(
-        `💳 <b>Withdrawal Process</b>\n\n` +
-          `Please provide your account number and bank name in the format:\n` +
-          `<code>AccountNumber BankName</code>\n\nExample:\n<code>1234567890 Zenith</code>`,
-        Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back to Menu', 'menu')]])
-      );
-
-      // Set user state for withdrawal process
-      user.state = 'withdrawal_bank_details';
-      await user.save();
-    } catch (error) {
-      console.error('Error in withdrawal handler:', error.message);
-      ctx.reply('❌ An unexpected error occurred. Please try again later.');
-    }
-  });
-
-  // Handle bank details input
-  bot.on('message', async (ctx) => {
-    try {
-      const telegramId = ctx.from.id;
-      const user = await User.findOne({ telegramId });
-
-      if (!user || user.state !== 'withdrawal_bank_details') return;
-
-      const [accountNumber, ...bankNameParts] = ctx.message.text.split(' ');
-      const bankName = bankNameParts.join(' ');
-
-      if (!accountNumber || !bankName) {
-        return ctx.replyWithHTML(
-          `❌ <b>Invalid input.</b>\nPlease send your details in this format:\n<code>AccountNumber BankName</code>`,
-          Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back to Menu', 'menu')]])
-        );
-      }
+      // Default account details
+      const accountNumber = '0781292722';
+      const bankName = 'Access Bank';
 
       try {
         // Verify account with Flutterwave
         const verifyResponse = await axios.post(
           'https://api.flutterwave.com/v3/accounts/resolve',
-          { account_number: accountNumber, account_bank: bankName },
+          { account_number: accountNumber, account_bank: 'accessbank' }, // Flutterwave bank code for Access Bank
           { headers: { Authorization: `Bearer ${FLUTTERWAVE_SECRET_KEY}` } }
         );
 
         const { account_name } = verifyResponse.data.data;
-
-        // Save bank details to user
-        user.bankAccountNumber = accountNumber;
-        user.bankName = bankName;
-        user.bankAccountName = account_name;
-        user.state = 'withdrawal_confirmation';
-        await user.save();
 
         // Show confirmation details
         const vatFee = (DAILY_WITHDRAWAL_LIMIT * VAT_PERCENTAGE) / 100;
         const finalAmount = DAILY_WITHDRAWAL_LIMIT - vatFee;
 
         return ctx.replyWithHTML(
-          `✅ <b>Bank details verified:</b>\n\n` +
+          `✅ <b>Default Bank Account Details:</b>\n\n` +
             `🔹 Account Name: ${account_name}\n` +
             `🔹 Account Number: ${accountNumber}\n` +
             `🔹 Bank Name: ${bankName}\n\n` +
@@ -106,12 +66,12 @@ module.exports = (bot) => {
       } catch (error) {
         console.error('Error verifying account:', error.message);
         return ctx.replyWithHTML(
-          `❌ <b>Failed to verify bank details.</b>\nPlease check your details and try again.`,
+          `❌ <b>Failed to verify default bank details.</b>\nPlease try again later.`,
           Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back to Menu', 'menu')]])
         );
       }
     } catch (error) {
-      console.error('Error handling bank details:', error.message);
+      console.error('Error in withdrawal handler:', error.message);
       ctx.reply('❌ An unexpected error occurred. Please try again later.');
     }
   });
@@ -122,17 +82,21 @@ module.exports = (bot) => {
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
 
-      if (!user || user.state !== 'withdrawal_confirmation') {
+      if (!user) {
         return ctx.reply('❌ No active withdrawal process.');
       }
+
+      // Default account details
+      const accountNumber = '07181292722';
+      const bankName = 'Access Bank';
 
       // Initiate withdrawal
       try {
         const withdrawResponse = await axios.post(
           'https://api.flutterwave.com/v3/transfers',
           {
-            account_bank: user.bankName,
-            account_number: user.bankAccountNumber,
+            account_bank: 'accessbank', // Flutterwave bank code for Access Bank
+            account_number: accountNumber,
             amount: DAILY_WITHDRAWAL_LIMIT,
             narration: 'Telegram Bot Withdrawal',
             currency: 'NGN',
@@ -142,7 +106,6 @@ module.exports = (bot) => {
 
         if (withdrawResponse.data.status === 'success') {
           user.balance -= DAILY_WITHDRAWAL_LIMIT;
-          user.state = null;
           await user.save();
 
           return ctx.replyWithHTML(
@@ -168,12 +131,6 @@ module.exports = (bot) => {
   // Handle cancellation
   bot.action('cancel_withdrawal', async (ctx) => {
     try {
-      const telegramId = ctx.from.id;
-      const user = await User.findOne({ telegramId });
-
-      user.state = null;
-      await user.save();
-
       return ctx.replyWithHTML(
         `❌ Withdrawal cancelled.\nYou have been returned to the main menu.`,
         Markup.inlineKeyboard([[Markup.button.callback('⬅️ Back to Menu', 'menu')]])
