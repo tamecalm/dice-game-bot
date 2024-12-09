@@ -20,7 +20,15 @@ const rollDiceForUser = async (ctx) => {
     const diceValue = diceMessage.dice.value;
 
     setTimeout(async () => {
-      await ctx.deleteMessage(diceMessage.message_id);
+      try {
+        await ctx.deleteMessage(diceMessage.message_id);
+      } catch (deleteError) {
+        if (deleteError.response && deleteError.response.error_code === 400) {
+          console.error('Message cannot be deleted for everyone:', deleteError.message);
+        } else {
+          logError('deleteMessage error', deleteError, ctx);
+        }
+      }
     }, 2000);
 
     return diceValue;
@@ -36,7 +44,15 @@ const rollDiceForBot = async (ctx) => {
     const diceValue = Math.floor(Math.random() * 6) + 1;
 
     setTimeout(async () => {
-      await ctx.deleteMessage(botDiceMessage.message_id);
+      try {
+        await ctx.deleteMessage(botDiceMessage.message_id);
+      } catch (deleteError) {
+        if (deleteError.response && deleteError.response.error_code === 400) {
+          console.error('Message cannot be deleted for everyone:', deleteError.message);
+        } else {
+          logError('deleteMessage error', deleteError, ctx);
+        }
+      }
     }, 2000);
 
     return diceValue;
@@ -85,10 +101,12 @@ const startGame = async (ctx, user) => {
 
     let resultMessage;
     let dailyLoss = user.dailyLoss;
+    let winAmount = 0;
 
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
-      user.balance += betAmount * 2;
+      winAmount = betAmount * 2;
+      user.balance += winAmount;
       dailyLoss = Math.max(dailyLoss - betAmount, 0); // Reset loss if win
     } else if (botRoll > playerRoll) {
       resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!`;
@@ -102,10 +120,13 @@ const startGame = async (ctx, user) => {
     user.dailyLoss = dailyLoss;
     await user.save();
 
+    // Add amount won to result message
+    resultMessage += `\n💰 <b>You won: ${winAmount}!</b>\n🔹 Your new balance: ${user.balance}`;
+
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: 'Play Again', callback_data: 'play' }],
+          [{ text: 'Play Again', callback_data: 'play' }], 
         ],
       },
     };
