@@ -10,6 +10,8 @@ const logError = (location, error, ctx) => {
 // 10-second cooldown for each user
 const COOLDOWN_TIME = 10000; // 10 seconds
 const LOSS_LIMIT = 500; // Daily loss limit
+const ADMIN_ID = settings.adminId; // Admin's Telegram ID
+const COMMISSION_RATE = 0.1; // 10%
 
 // Track last game time for each user
 const lastGameTime = {};
@@ -89,6 +91,11 @@ const startGame = async (ctx, user) => {
     user.balance -= betAmount;
     await user.save();
 
+    const admin = await User.findOne({ telegramId: ADMIN_ID });
+    if (!admin) {
+      return ctx.reply('❌ Admin account not found. Please contact support.');
+    }
+
     const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
 
     const playerRoll = await rollDiceForUser(ctx);
@@ -104,29 +111,33 @@ const startGame = async (ctx, user) => {
     let winAmount = 0;
 
     if (playerRoll > botRoll) {
-      resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
       winAmount = betAmount * 2;
-      user.balance += winAmount;
+      const commission = Math.floor(winAmount * COMMISSION_RATE);
+      user.balance += winAmount - commission;
+      admin.balance += commission;
+      resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!\n💰 <b>You won: ${winAmount - commission} (after commission).</b>`;
       dailyLoss = Math.max(dailyLoss - betAmount, 0); // Reset loss if win
     } else if (botRoll > playerRoll) {
-      resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!`;
+      admin.balance += betAmount;
       dailyLoss += betAmount;
+      resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!\n💸 <b>Your bet has been added to admin's balance.</b>`;
     } else {
-      resultMessage = `🤝 It's a draw! Both rolled ${playerRoll}. Bet refunded.`;
       user.balance += betAmount; // Refund the bet
+      resultMessage = `🤝 It's a draw! Both rolled ${playerRoll}. Bet refunded.`;
     }
 
-    // Update daily loss and balance
+    // Update daily loss, balance, and admin balance
     user.dailyLoss = dailyLoss;
     await user.save();
+    await admin.save();
 
-    // Add amount won to result message
-    resultMessage += `\n💰 <b>You won: ${winAmount}!</b>\n🔹 Your new balance: ${user.balance}`;
+    // Add new balance to result message
+    resultMessage += `\n🔹 <b>Your new balance: ${user.balance}</b>`;
 
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: 'Play Again', callback_data: 'play' }], 
+          [{ text: 'Play Again', callback_data: 'play' }],
         ],
       },
     };
