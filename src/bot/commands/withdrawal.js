@@ -36,31 +36,6 @@ module.exports = (bot) => {
     }
   });
 
-  // Action handler for the "Back to Menu" button
-  bot.action('menu', async (ctx) => {
-    try {
-      const telegramId = ctx.from.id;
-      const user = await User.findOne({ telegramId });
-      if (!user) {
-        return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      const mainMenu = Markup.inlineKeyboard([
-        [Markup.button.callback('💳 Withdrawal', 'withdrawal')],
-        [Markup.button.callback('🎮 Play a Game', 'play_game')],
-        [Markup.button.callback('💼 Account Settings', 'settings')],
-      ]);
-
-      await ctx.editMessageText(
-        `<b>Welcome back to the main menu!</b>\n\nChoose an option below to continue.`,
-        { parse_mode: 'HTML', reply_markup: mainMenu }
-      );
-    } catch (error) {
-      console.error('Error in menu handler:', error.message);
-      ctx.reply('❌ An unexpected error occurred. Please try again later.');
-    }
-  });
-
   // Handle bank details input
   bot.on('message', async (ctx) => {
     try {
