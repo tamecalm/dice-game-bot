@@ -1,4 +1,5 @@
-const { Telegraf, Markup } = require('telegraf');
+const { Markup } = require('telegraf');
+// const { Telegraf, Markup } = require('telegraf'); // Saved for later
 const settings = require('../../config/settings');
 
 // Import command handlers
@@ -34,26 +35,17 @@ bot.action('menu', async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Escape special characters in the entire message, including dynamic content
-    const message = `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
-                    `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
-                    `\n\n` +
-                    `*Explore the options below and make your choice:*`; // Additional stylistic choice
-
-    // Escape all special characters for MarkdownV2
-    const escapedMessage = message.replace(/([_*[\]()~>#|{}.!])/g, '\\$1');
-
-    // Send the escaped message
+    // Welcome message with a personalized touch
     await ctx.reply(
-      escapedMessage,
-      {
-        parse_mode: 'MarkdownV2', // Use MarkdownV2 for better compatibility
-        reply_markup: Markup.inlineKeyboard([  // Inline buttons
+      `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
+      `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
+      `\n\n` +
+      `*Explore the options below and make your choice:*`, // Additional stylistic choice 
+         Markup.inlineKeyboard([
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
           [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
         ])
-      }
     );
   } catch (error) {
     console.error('Error in back to menu handler:', error.message);
