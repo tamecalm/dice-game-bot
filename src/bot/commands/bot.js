@@ -1,5 +1,5 @@
 const { Markup } = require('telegraf');
-// const { Telegraf, Markup } = require('telegraf'); // Saved for later
+const { Telegraf } = require('telegraf'); // Saved for later
 const settings = require('../../config/settings');
 
 // Import command handlers
