@@ -10,7 +10,7 @@ const logError = (location, error, ctx) => {
 // 10-second cooldown for each user
 const COOLDOWN_TIME = 10000; // 10 seconds
 const LOSS_LIMIT = 500; // Daily loss limit
-const ADMIN_ID = settings.adminId; // Admin's Telegram ID
+const ADMIN_ID = settings.adminIds; // Admin's Telegram ID
 const COMMISSION_RATE = 0.1; // 10%
 
 // Track last game time for each user
