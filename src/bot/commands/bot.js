@@ -42,8 +42,8 @@ bot.action('menu', async (ctx) => {
       `<i>Explore the options below and make your choice:</i>`, // Additional stylistic choice
 
       {
-        parse_mode: 'HTML',
-        reply_markup: Markup.inlineKeyboard([
+        parse_mode: 'HTML',  // Ensure this is present for HTML formatting
+        reply_markup: Markup.inlineKeyboard([ // Make sure this is correctly placed
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
           [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
@@ -55,6 +55,7 @@ bot.action('menu', async (ctx) => {
     ctx.reply('❌ An unexpected error occurred. Please try again later.');
   }
 });
+
 
 
 // Handle unrecognized commands or general text
