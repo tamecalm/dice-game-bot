@@ -39,20 +39,24 @@ const startGame = async (ctx, user) => {
     user.balance -= betAmount;
     await user.save();
 
+    // Send initial message for the game start
     let gameMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
-    
-    // Player rolls the dice (shown to user only)
+
+    // Wait for user to roll the dice
     const playerRoll = await rollDiceForUser(ctx, 'user');
     if (playerRoll === null) return; // Handle potential errors in dice roll
 
+    // Delete the "Game Started" message after the user rolls their dice
+    await ctx.deleteMessage(gameMessage.message_id);
+
     // Edit the message to show the bot is rolling
-    await ctx.editMessageText("🤖 <b>Bot</b> is rolling the dice...");
+    gameMessage = await ctx.replyWithHTML('🤖 <b>Bot</b> is rolling the dice...');
 
     // Bot rolls the dice (but the user will not see it)
     const botRoll = await rollDiceForUser(ctx, 'bot');
     if (botRoll === null) return; // Handle potential errors in dice roll
 
-    // After both dice are rolled, update the message and show the result
+    // After both dice are rolled, show the result
     let resultMessage;
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
@@ -66,11 +70,12 @@ const startGame = async (ctx, user) => {
       await user.save();
     }
 
-    // Edit the message with the final result and add the "Back to Menu" button
+    // Edit the message with the final result
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: 'Back to Menu', callback_data: 'back_to_menu' }],
+          [{ text: 'Play Again', callback_data: 'play' }],
+          [{ text: 'Back to Menu', callback_data: 'menu' }],
         ],
       },
     };
@@ -126,13 +131,34 @@ const playCommand = (bot) => {
   });
 
   // Handle back to menu action
-  bot.action('back_to_menu', async (ctx) => {
+  bot.action('menu', async (ctx) => {
     try {
       await ctx.answerCbQuery();
       // Your back to menu handler logic here
       await ctx.reply('🔙 Returning to menu...');
     } catch (error) {
       logError('back_to_menu', error, ctx);
+    }
+  });
+
+  // Handle play again action
+  bot.action('play', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      const telegramId = ctx.from.id;
+      const user = await User.findOne({ telegramId });
+
+      if (!user) {
+        return ctx.reply('❌ You are not registered. Use /start to register.');
+      }
+
+      if (user.balance < 100) {
+        return ctx.reply('❌ Insufficient balance! You need at least 100 to play again.');
+      }
+
+      await startGame(ctx, user);
+    } catch (error) {
+      logError('play_again', error, ctx);
     }
   });
 
