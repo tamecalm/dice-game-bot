@@ -39,12 +39,15 @@ bot.action('menu', async (ctx) => {
       `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
       `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
       `\n\n` +
-      `*Explore the options below and make your choice:*`, // Additional stylistic choice 
-         Markup.inlineKeyboard([
+      `*Explore the options below and make your choice:*`, // Additional stylistic choice
+      {
+        parse_mode: 'Markdown', // Enable Markdown formatting
+        reply_markup: Markup.inlineKeyboard([  // Inline buttons
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
           [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
         ])
+      }
     );
   } catch (error) {
     console.error('Error in back to menu handler:', error.message);

@@ -95,4 +95,30 @@ bot.action('menu', async (ctx) => {
     }
   });
 
+..............
+
+bot.action('menu', async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+
+    // Welcome message with a personalized touch
+    await ctx.reply(
+      `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
+      `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
+      `\n\n` +
+      `*Explore the options below and make your choice:*`, // Additional stylistic choice 
+         Markup.inlineKeyboard([
+          [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
+          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+          [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
+        ])
+    );
+  } catch (error) {
+    console.error('Error in back to menu handler:', error.message);
+    ctx.reply('❌ An unexpected error occurred. Please try again later.');
+  }
+});
+
+
+
   */
