@@ -41,7 +41,7 @@ bot.action('menu', async (ctx) => {
       `\n\n` +
       `*Explore the options below and make your choice:*`, // Additional stylistic choice
       {
-        parse_mode: 'Markdown', // Enable Markdown formatting
+        parse_mode: 'MarkdownV2', // Use MarkdownV2 for better compatibility
         reply_markup: Markup.inlineKeyboard([  // Inline buttons
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
@@ -54,6 +54,7 @@ bot.action('menu', async (ctx) => {
     ctx.reply('❌ An unexpected error occurred. Please try again later.');
   }
 });
+
 
 
 // Handle unrecognized commands or general text
