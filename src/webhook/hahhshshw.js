@@ -76,7 +76,7 @@ module.exports = router;
 
 
 
-// INcase i need to return this back to bot.js
+/*INcase i need to return this back to bot.js
 
 bot.action('menu', async (ctx) => {
     try {
@@ -94,3 +94,5 @@ bot.action('menu', async (ctx) => {
       ctx.reply('❌ An unexpected error occurred. Please try again later.');
     }
   });
+
+  */
