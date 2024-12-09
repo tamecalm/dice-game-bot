@@ -1,5 +1,4 @@
 const User = require('../../models/User');
-const { Markup } = require('telegraf');
 
 // Debugging utilities
 const logError = (location, error, ctx) => {
@@ -13,19 +12,15 @@ const logDebug = (location, message) => {
   console.log(`DEBUG: ${location} - ${message}`);
 };
 
-// Function to simulate animated dice roll
-const animatedDiceRoll = async (ctx) => {
-  const diceFaces = ['🎲', '🎲', '🎲', '🎲', '🎲', '🎲']; // Animation frames
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  for (let i = 0; i < diceFaces.length; i++) {
-    await ctx.replyWithHTML(`<b>Rolling...</b> ${diceFaces[i]}`);
-    await delay(500); // 0.5-second delay
+// Function to roll a dice
+const rollDice = async (ctx) => {
+  try {
+    const result = await ctx.replyWithDice();
+    return result.dice.value;
+  } catch (error) {
+    logError('rollDice', error, ctx);
+    return null;
   }
-
-  const diceResult = Math.floor(Math.random() * 6) + 1;
-  await ctx.replyWithHTML(`<b>Final Result:</b> ${'🎲'.repeat(diceResult)} (Value: ${diceResult})`);
-  return diceResult;
 };
 
 // Function to start the game
@@ -33,7 +28,6 @@ const startGame = async (ctx, user) => {
   try {
     logDebug('startGame', `Starting game for user: ${user.username}`);
 
-    // Deduct bet amount from user
     const betAmount = 100;
     user.balance -= betAmount;
     await user.save();
@@ -41,11 +35,13 @@ const startGame = async (ctx, user) => {
     await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
 
     // Player rolls the dice
-    const playerRoll = await animatedDiceRoll(ctx);
+    const playerRoll = await rollDice(ctx);
+    if (playerRoll === null) return; // Handle potential errors in dice roll
 
     // Bot rolls the dice
     await ctx.replyWithHTML(`🤖 <b>Bot</b> is rolling the dice!`);
-    const botRoll = await animatedDiceRoll(ctx);
+    const botRoll = await rollDice(ctx);
+    if (botRoll === null) return; // Handle potential errors in dice roll
 
     // Determine winner
     let resultMessage;
