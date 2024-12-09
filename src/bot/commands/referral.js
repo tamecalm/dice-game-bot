@@ -1,6 +1,7 @@
 const { Markup } = require('telegraf');
 const User = require('../../models/User');
 const settings = require('../../config/settings'); // Assuming settings.js holds referral reward percentages
+const bot = require('./bot');
 
 module.exports = (bot) => {
   const REFERRAL_PERCENTAGE = 20; // Reward percentage for referrals (20% of the first deposit)
@@ -70,7 +71,7 @@ module.exports = (bot) => {
       }
 
       return ctx.replyWithHTML(
-        `🎉 Welcome, <b>${ctx.from.first_name || 'User'}</b>!\n\nUse /menu to explore the options.`
+        `🎉 Welcome, <b>${ctx.from.first_name || 'User'}</b>!\n\nUse /start to explore the options.`
       );
     } catch (error) {
       console.error('Error in /start command:', error.message);
