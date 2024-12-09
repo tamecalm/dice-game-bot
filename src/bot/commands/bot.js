@@ -35,29 +35,23 @@ bot.action('menu', async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
-    // Edit the current message with the new content and buttons, without using reply_markup
+    // Edit the current message with the new content and buttons
     await ctx.editMessageText(
-      `👋 <b>Welcome back, ${ctx.from.first_name}!</b>\n\n` + // Personalized greeting in bold
+      `👋 Welcome back, ${ctx.from.first_name}!\n\n` + // Personalized greeting
       `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
       `\n\n` +
-      `<i>Explore the options below and make your choice:</i>`, // Italicized text
-      {
-        parse_mode: 'HTML',  // HTML formatting enabled
-        inline_keyboard: [    // Inline buttons, directly added without reply_markup
-          [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
-          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
-          [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
-        ]
-      }
+      `Explore the options below and make your choice:`, // Additional stylistic choice 
+      Markup.inlineKeyboard([  // Inline keyboard with options
+        [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
+        [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+        [Markup.button.callback('👥 Referral', 'referral')] // Added 'referral' action here
+      ])
     );
   } catch (error) {
     console.error('Error in back to menu handler:', error.message);
     ctx.reply('❌ An unexpected error occurred. Please try again later.');
   }
 });
-
-
-
 
 // Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
