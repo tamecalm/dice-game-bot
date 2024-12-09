@@ -32,7 +32,7 @@ module.exports = (bot) => {
         {
           reply_markup: {
             inline_keyboard: [
-              [{ text: '⬅️ Back to Menu', callback_data: 'menu' }],
+              [{ text: '❌ Cancel', callback_data: 'cancel_deposit' }],
             ],
           },
         }
@@ -61,7 +61,7 @@ module.exports = (bot) => {
               {
                 reply_markup: {
                   inline_keyboard: [
-                    [{ text: '⬅️ Back to Menu', callback_data: 'menu' }],
+                    [{ text: '❌ Cancel', callback_data: 'cancel_deposit' }],
                   ],
                 },
               }
@@ -88,7 +88,7 @@ module.exports = (bot) => {
                     { text: '✅ Confirm', callback_data: 'confirm_deposit' },
                     { text: '❌ Cancel', callback_data: 'cancel_deposit' },
                   ],
-                  [{ text: '⬅️ Back to Menu', callback_data: 'menu' }],
+                 // [{ text: '⬅️ Back to Menu', callback_data: 'menu' }],
                 ],
               },
             }
