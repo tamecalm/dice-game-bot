@@ -125,10 +125,10 @@ module.exports = (bot) => {
           `💰 <b>Balance:</b> ${formattedBalance} ${currency}\n\n` +
           `${exchangeRateMessage}\n\n` +
           `<i>Note: Exchange rates are approximate and may vary.</i>`,
-        Markup.inlineKeyboard([
-          [Markup.button.callback('⬅️ Back to Menu', 'menu')],
-          [Markup.button.callback('🔄 Refresh Balance', 'balance')]
-        ])
+          Markup.inlineKeyboard([
+            [Markup.button.callback('⬅️ Back to Menu', 'menu'), Markup.button.callback('🔄 Refresh Balance', 'balance')]
+          ])
+          
       );
     } catch (error) {
       console.error('Error in balance command:', error.message);

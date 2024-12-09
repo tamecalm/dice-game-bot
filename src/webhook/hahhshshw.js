@@ -73,3 +73,24 @@ router.use((req, res) => {
 });
 
 module.exports = router;
+
+
+
+// INcase i need to return this back to bot.js
+
+bot.action('menu', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      await ctx.reply(
+        `⬅️ Back to the main menu! Choose an option:`,
+        Markup.inlineKeyboard([
+          [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
+          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
+          [Markup.button.callback('👥 Referral', 'referral')], // Added 'referral' action here
+        ])
+      );
+    } catch (error) {
+      console.error('Error in back to menu handler:', error.message);
+      ctx.reply('❌ An unexpected error occurred. Please try again later.');
+    }
+  });
