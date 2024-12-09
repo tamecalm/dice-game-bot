@@ -15,7 +15,11 @@ const rollDiceForUser = async (ctx) => {
 
     // Delete dice message after rolling
     setTimeout(async () => {
-      await ctx.deleteMessage(diceMessage.message_id);
+      try {
+        await ctx.deleteMessage(diceMessage.message_id);
+      } catch (error) {
+        console.warn(`Unable to delete user's dice message:`, error.message);
+      }
     }, 2000); // Wait for the dice animation to finish before deleting
 
     return diceValue;
@@ -27,13 +31,17 @@ const rollDiceForUser = async (ctx) => {
 
 const rollDiceForBot = async (ctx) => {
   try {
-    // Send bot's dice roll animation (hidden from user)
+    // Simulate bot rolling dice
     const botDiceMessage = await ctx.replyWithHTML('🤖 Bot is rolling the dice...');
     const diceValue = Math.floor(Math.random() * 6) + 1; // Simulate bot's dice roll
 
-    // Delete the bot's dice roll message after a delay
+    // Delete bot's dice roll message
     setTimeout(async () => {
-      await ctx.deleteMessage(botDiceMessage.message_id);
+      try {
+        await ctx.deleteMessage(botDiceMessage.message_id);
+      } catch (error) {
+        console.warn(`Unable to delete bot's dice message:`, error.message);
+      }
     }, 2000);
 
     return diceValue;
@@ -57,7 +65,11 @@ const startGame = async (ctx, user) => {
     if (playerRoll === null) return;
 
     // Delete "Game Start" message after the user rolls
-    await ctx.deleteMessage(startMessage.message_id);
+    try {
+      await ctx.deleteMessage(startMessage.message_id);
+    } catch (error) {
+      console.warn(`Unable to delete 'Game Start' message:`, error.message);
+    }
 
     // Bot rolls the dice (hidden from user)
     const botRoll = await rollDiceForBot(ctx);
