@@ -21,8 +21,8 @@ const rollDiceForUser = async (ctx, userType) => {
       return result.dice.value;
     } else {
       // Bot rolls the dice but does not send it to the user
-      const result = await ctx.replyWithDice({ reply_markup: { hide_keyboard: true } });
-      return result.dice.value;
+      await ctx.replyWithDice({ reply_markup: { hide_keyboard: true } });
+      return Math.floor(Math.random() * 6) + 1; // Simulating bot's dice roll
     }
   } catch (error) {
     logError('rollDiceForUser', error, ctx);
@@ -39,18 +39,20 @@ const startGame = async (ctx, user) => {
     user.balance -= betAmount;
     await user.save();
 
-    await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
-
+    let gameMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
+    
     // Player rolls the dice (shown to user only)
     const playerRoll = await rollDiceForUser(ctx, 'user');
     if (playerRoll === null) return; // Handle potential errors in dice roll
 
+    // Edit the message to show the bot is rolling
+    await ctx.editMessageText("🤖 <b>Bot</b> is rolling the dice...");
+
     // Bot rolls the dice (but the user will not see it)
-    await ctx.replyWithHTML(`🤖 <b>Bot</b> is rolling the dice!`);
     const botRoll = await rollDiceForUser(ctx, 'bot');
     if (botRoll === null) return; // Handle potential errors in dice roll
 
-    // After both dice are rolled, display results
+    // After both dice are rolled, update the message and show the result
     let resultMessage;
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
@@ -64,15 +66,15 @@ const startGame = async (ctx, user) => {
       await user.save();
     }
 
-    // Send result and "Back to Menu" button
+    // Edit the message with the final result and add the "Back to Menu" button
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
-          [{ text: 'Back to Menu', callback_data: 'menu' }],
+          [{ text: 'Back to Menu', callback_data: 'back_to_menu' }],
         ],
       },
     };
-    await ctx.replyWithHTML(resultMessage, resultMarkup);
+    await ctx.editMessageText(resultMessage, resultMarkup);
   } catch (error) {
     logError('startGame', error, ctx);
   }
