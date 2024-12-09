@@ -4,9 +4,9 @@ const User = require('../../models/User');
 const settings = require('../../config/settings');
 const paystack = require('paystack-api')(settings.paystackSecretKey || process.env.PAYSTACK_SECRET_KEY);
 
-const MIN_WITHDRAWAL = 100; // Updated minimum withdrawal amount
-const MAX_WITHDRAWAL = 5000; // Maximum withdrawal amount
-const WITHDRAWAL_FEE_PERCENTAGE = 2; // Withdrawal fee percentage
+const MIN_WITHDRAWAL = 100;
+const MAX_WITHDRAWAL = 5000;
+const WITHDRAWAL_FEE_PERCENTAGE = 2;
 
 module.exports = (bot) => {
   // Action handler for the withdrawal option
@@ -14,7 +14,6 @@ module.exports = (bot) => {
     try {
       await ctx.answerCbQuery();
       const telegramId = ctx.from.id;
-
       const user = await User.findOne({ telegramId });
       if (!user) {
         return ctx.replyWithHTML('❌ <b>You are not registered.</b>\nUse /start to register.');
@@ -59,34 +58,44 @@ module.exports = (bot) => {
           );
         }
 
-        const bankDetailsResponse = await paystack.verification.resolveAccount({
-          account_number: accountNumber,
-          bank_code: bankCode,
-        });
+        try {
+          const bankDetailsResponse = await paystack.verification.resolveAccount({
+            account_number: accountNumber,
+            bank_code: bankCode,
+          });
 
-        const { account_name } = bankDetailsResponse.data;
+          const { account_name } = bankDetailsResponse.data;
 
-        user.bankAccountNumber = accountNumber;
-        user.bankCode = bankCode;
-        user.bankAccountName = account_name;
-        user.state = 'withdrawal_amount';
-        await user.save();
+          user.bankAccountNumber = accountNumber;
+          user.bankCode = bankCode;
+          user.bankAccountName = account_name;
+          user.state = 'withdrawal_amount';
+          await user.save();
 
-        return ctx.replyWithHTML(
-          `✅ <b>Bank details verified:</b>\n\n` +
-            `🔹 Account Name: ${account_name}\n` +
-            `🔹 Account Number: ${accountNumber}\n` +
-            `🔹 Bank Code: ${bankCode}\n\n` +
-            `💳 <b>Now, enter the amount you wish to withdraw:</b>\n` +
-            `💰 <b>Balance:</b> ${user.balance.toFixed(2)} NGN\n` +
-            `📋 <i>Note:</i>\n` +
-            `- Minimum: ${MIN_WITHDRAWAL} NGN\n` +
-            `- Maximum: ${MAX_WITHDRAWAL} NGN\n` +
-            `- Fee: ${WITHDRAWAL_FEE_PERCENTAGE}%`,
-          Markup.inlineKeyboard([
-            [Markup.button.callback('⬅️ Back to Menu', 'menu')],
-          ])
-        );
+          return ctx.replyWithHTML(
+            `✅ <b>Bank details verified:</b>\n\n` +
+              `🔹 Account Name: ${account_name}\n` +
+              `🔹 Account Number: ${accountNumber}\n` +
+              `🔹 Bank Code: ${bankCode}\n\n` +
+              `💳 <b>Now, enter the amount you wish to withdraw:</b>\n` +
+              `💰 <b>Balance:</b> ${user.balance.toFixed(2)} NGN\n` +
+              `📋 <i>Note:</i>\n` +
+              `- Minimum: ${MIN_WITHDRAWAL} NGN\n` +
+              `- Maximum: ${MAX_WITHDRAWAL} NGN\n` +
+              `- Fee: ${WITHDRAWAL_FEE_PERCENTAGE}%`,
+            Markup.inlineKeyboard([
+              [Markup.button.callback('⬅️ Back to Menu', 'menu')],
+            ])
+          );
+        } catch (error) {
+          console.error('Error in Paystack verification:', error.message);
+          return ctx.replyWithHTML(
+            `❌ <b>Bank details verification failed.</b>\nPlease check the details and try again.`,
+            Markup.inlineKeyboard([
+              [Markup.button.callback('⬅️ Back to Menu', 'menu')],
+            ])
+          );
+        }
       } else if (user.state === 'withdrawal_amount') {
         const withdrawalAmount = parseFloat(ctx.message.text);
 
