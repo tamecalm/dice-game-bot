@@ -34,9 +34,12 @@ bot.action('menu', async (ctx) => {
   try {
     await ctx.answerCbQuery();
 
+    // Escape special characters for MarkdownV2 compatibility
+    const userName = ctx.from.first_name.replace(/([_*[\]()~>#|{}.!])/g, '\\$1');
+
     // Welcome message with a personalized touch
     await ctx.reply(
-      `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
+      `**👋 Welcome back, ${userName}!**\n\n` + // Personalized greeting
       `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
       `\n\n` +
       `*Explore the options below and make your choice:*`, // Additional stylistic choice
@@ -54,8 +57,6 @@ bot.action('menu', async (ctx) => {
     ctx.reply('❌ An unexpected error occurred. Please try again later.');
   }
 });
-
-
 
 // Handle unrecognized commands or general text
 bot.on('text', (ctx) => {
