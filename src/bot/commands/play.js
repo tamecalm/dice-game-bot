@@ -1,6 +1,5 @@
 const User = require('../../models/User');
-const settings = require('../../config/settings'); // Admin IDs stored here
-
+const settings = require('../../config/settings'); // For admin IDs
 const logError = (location, error, ctx) => {
   console.error(`Error at ${location}:`, error.message);
   if (ctx) {
@@ -8,85 +7,101 @@ const logError = (location, error, ctx) => {
   }
 };
 
-// Cooldown Map
-const cooldowns = new Map();
+// 10-second cooldown for each user
+const COOLDOWN_TIME = 10000; // 10 seconds
+const LOSS_LIMIT = 500; // Daily loss limit
 
-// Constants
-const COOLDOWN_PERIOD = 10 * 1000; // 10 seconds
-const DAILY_LOSS_LIMIT = 1000; // Set a daily loss limit
+// Track last game time for each user
+const lastGameTime = {};
 
-// Calculate Entry Fee (10%)
-const calculateEntryFee = (betAmount) => Math.ceil(betAmount * 0.10);
+const rollDiceForUser = async (ctx) => {
+  try {
+    const diceMessage = await ctx.replyWithDice();
+    const diceValue = diceMessage.dice.value;
 
-// Handle Cooldown
-const handleCooldown = (telegramId) => {
-  const now = Date.now();
-  if (cooldowns.has(telegramId)) {
-    const lastPlayTime = cooldowns.get(telegramId);
-    if (now - lastPlayTime < COOLDOWN_PERIOD) {
-      return false; // Still in cooldown
-    }
+    setTimeout(async () => {
+      await ctx.deleteMessage(diceMessage.message_id);
+    }, 2000);
+
+    return diceValue;
+  } catch (error) {
+    logError('rollDiceForUser', error, ctx);
+    return null;
   }
-  cooldowns.set(telegramId, now);
-  return true; // Cooldown passed
 };
 
-// Start Game Logic
+const rollDiceForBot = async (ctx) => {
+  try {
+    const botDiceMessage = await ctx.replyWithHTML('🤖 Bot is rolling the dice...');
+    const diceValue = Math.floor(Math.random() * 6) + 1;
+
+    setTimeout(async () => {
+      await ctx.deleteMessage(botDiceMessage.message_id);
+    }, 2000);
+
+    return diceValue;
+  } catch (error) {
+    logError('rollDiceForBot', error, ctx);
+    return null;
+  }
+};
+
 const startGame = async (ctx, user) => {
   try {
-    const betAmount = 100;
+    const currentTime = Date.now();
+    const lastGame = lastGameTime[user.telegramId] || 0;
 
-    // Enforce Daily Loss Limit
-    if (user.dailyLoss >= DAILY_LOSS_LIMIT) {
-      return ctx.reply('❌ You have reached your daily loss limit. Try again tomorrow!');
+    // Check cooldown (10 seconds)
+    if (currentTime - lastGame < COOLDOWN_TIME) {
+      return ctx.reply('❌ Please wait a few seconds before playing again.');
     }
 
-    const entryFee = calculateEntryFee(betAmount);
-    const playAmount = betAmount - entryFee;
+    // Update the last game time
+    lastGameTime[user.telegramId] = currentTime;
 
-    // Deduct entry fee and bet amount
+    // Entry fee and loss check
+    const betAmount = 100;
+    if (user.balance < betAmount) {
+      return ctx.reply('❌ Insufficient balance! You need at least 100 to play.');
+    }
+
+    // Daily loss limit check
+    if (user.dailyLoss >= LOSS_LIMIT) {
+      return ctx.reply('❌ You have reached your daily loss limit. Please try again tomorrow.');
+    }
+
     user.balance -= betAmount;
-    user.dailyLoss += betAmount; // Track daily losses
     await user.save();
 
-    // Add entry fee to owner account
-    const ownerAccount = await User.findOne({ telegramId: { $in: settings.adminIds } });
-    if (ownerAccount) {
-      ownerAccount.balance += entryFee;
-      await ownerAccount.save();
-    }
-
-    // Notify user of game start
     const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
 
-    // User rolls dice
     const playerRoll = await rollDiceForUser(ctx);
     if (playerRoll === null) return;
 
-    // Delete "Game Start" message
     await ctx.deleteMessage(startMessage.message_id);
 
-    // Bot rolls dice
     const botRoll = await rollDiceForBot(ctx);
     if (botRoll === null) return;
 
-    // Determine result
     let resultMessage;
+    let dailyLoss = user.dailyLoss;
+
     if (playerRoll > botRoll) {
       resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!`;
-      user.balance += playAmount * 2; // Double the play amount for the winner
-      user.dailyLoss -= playAmount; // Adjust daily loss (win back amount)
-      await user.save();
+      user.balance += betAmount * 2;
+      dailyLoss = Math.max(dailyLoss - betAmount, 0); // Reset loss if win
     } else if (botRoll > playerRoll) {
       resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!`;
+      dailyLoss += betAmount;
     } else {
       resultMessage = `🤝 It's a draw! Both rolled ${playerRoll}. Bet refunded.`;
-      user.balance += betAmount; // Refund full bet
-      user.dailyLoss -= betAmount; // Adjust daily loss (refund amount)
-      await user.save();
+      user.balance += betAmount; // Refund the bet
     }
 
-    // Send result message with "Play Again" button
+    // Update daily loss and balance
+    user.dailyLoss = dailyLoss;
+    await user.save();
+
     const resultMarkup = {
       reply_markup: {
         inline_keyboard: [
@@ -94,33 +109,23 @@ const startGame = async (ctx, user) => {
         ],
       },
     };
+
     await ctx.replyWithHTML(resultMessage, resultMarkup);
   } catch (error) {
     logError('startGame', error, ctx);
   }
 };
 
-// Play Command with Cooldown Check
 const playCommand = (bot) => {
   bot.action('play', async (ctx) => {
     try {
       await ctx.answerCbQuery();
 
       const telegramId = ctx.from.id;
-
-      // Check Cooldown
-      if (!handleCooldown(telegramId)) {
-        return ctx.reply('⏳ You must wait 10 seconds before playing again!');
-      }
-
       const user = await User.findOne({ telegramId });
 
       if (!user) {
         return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      if (user.balance < 100) {
-        return ctx.reply('❌ Insufficient balance! You need at least 100 to play.');
       }
 
       await startGame(ctx, user);
@@ -132,20 +137,10 @@ const playCommand = (bot) => {
   bot.command('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
-
-      // Check Cooldown
-      if (!handleCooldown(telegramId)) {
-        return ctx.reply('⏳ You must wait 10 seconds before playing again!');
-      }
-
       const user = await User.findOne({ telegramId });
 
       if (!user) {
         return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      if (user.balance < 100) {
-        return ctx.reply('❌ Insufficient balance! You need at least 100 to play.');
       }
 
       await startGame(ctx, user);
