@@ -61,7 +61,7 @@ const startGame = async (ctx, players) => {
 };
 
 const playCommand = (bot) => {
-  bot.command('play', async (ctx) => {
+  bot.action('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
 
