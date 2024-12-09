@@ -37,10 +37,10 @@ bot.action('menu', async (ctx) => {
 
     // Welcome message with a personalized touch
     await ctx.reply(
-      `**👋 Welcome back, ${ctx.from.first_name}!**\n\n` + // Personalized greeting
+      `👋 <b>Welcome back, ${ctx.from.first_name}!</b>\n\n` + // Personalized greeting
       `You have returned to the main menu. Choose what you'd like to do next!` + // Encouraging text
       `\n\n` +
-      `*Explore the options below and make your choice:*`, // Additional stylistic choice 
+      `<i>Explore the options below and make your choice:<i>`, // Additional stylistic choice 
          Markup.inlineKeyboard([
           [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
           [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
