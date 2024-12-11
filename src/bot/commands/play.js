@@ -223,7 +223,8 @@ const playCommand = (bot) => {
       const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
 
       const inlineKeyboard = [
-        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+        betAmounts.slice(0, 3).map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+        betAmounts.slice(3).map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
       ];
 
       const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
@@ -288,34 +289,6 @@ const playCommand = (bot) => {
       logError('cancel_game action', error, ctx);
     }
   });
-
-  bot.action('play', async (ctx) => {
-    try {
-      await ctx.answerCbQuery();
-      const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
-
-      const inlineKeyboard = [
-        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
-      ];
-
-      const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
-        reply_markup: {
-          inline_keyboard: inlineKeyboard,
-        },
-      });
-
-      setTimeout(async () => {
-        try {
-          await ctx.deleteMessage(betMessage.message_id);
-        } catch (error) {
-          logError('deleteBetMessage', error);
-        }
-      }, 30000);
-    } catch (error) {
-      logError('play action', error, ctx);
-    }
-  });
-};
-
+}
 module.exports = playCommand;
 
