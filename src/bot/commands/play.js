@@ -7,8 +7,8 @@ const logError = (location, error, ctx) => {
   }
 };
 
-// 1 minute cooldown for each user
-const COOLDOWN_TIME = 300000; // 1 minute
+// 10-second cooldown for each user
+const COOLDOWN_TIME = 300000; // 10 seconds
 const ADMIN_ID = settings.adminIds; // Admin's Telegram ID
 const COMMISSION_RATE = 0.3; // 30%
 
@@ -170,7 +170,7 @@ const startGame = async (ctx, user, betAmount) => {
 };
 
 const playCommand = (bot) => {
-  bot.action('play', async (ctx) => {
+  bot.command('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
@@ -179,17 +179,24 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
-      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
+      const messageHandler = async (messageCtx) => {
+        try {
+          const betAmount = parseInt(messageCtx.message.text, 10);
 
-      bot.on('text', async (ctx) => {
-        const betAmount = parseInt(ctx.message.text, 10);
+          if (isNaN(betAmount) || betAmount < 100 || betAmount > 5000) {
+            return messageCtx.reply('❌ Invalid amount. Please enter a value between 100 and 5000.');
+          }
 
-        if (isNaN(betAmount) || betAmount < 100 || betAmount > 5000) {
-          return ctx.reply('❌ Invalid amount. Please enter a value between 100 and 5000.');
+          await confirmGame(messageCtx, user, betAmount);
+          bot.removeListener('text', messageHandler); // Ensure only one response
+        } catch (error) {
+          logError('playCommand messageHandler', error, messageCtx);
         }
+      };
 
-        await confirmGame(ctx, user, betAmount);
-      });
+      bot.on('text', messageHandler);
+
+      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
     } catch (error) {
       logError('playCommand', error, ctx);
     }
