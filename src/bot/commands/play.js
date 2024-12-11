@@ -7,8 +7,8 @@ const logError = (location, error, ctx) => {
   }
 };
 
-// 10-second cooldown for each user
-const COOLDOWN_TIME = 300000; // 10 seconds
+// 1 Minute cooldown for each user
+const COOLDOWN_TIME = 300000; // 1 minute
 const ADMIN_ID = settings.adminIds; // Admin's Telegram ID
 const COMMISSION_RATE = 0.3; // 30%
 
@@ -84,6 +84,14 @@ Do you want to proceed?`,
       }
     );
 
+    setTimeout(async () => {
+      try {
+        await ctx.deleteMessage(confirmationMessage.message_id);
+      } catch (error) {
+        logError('deleteConfirmationMessage', error, ctx);
+      }
+    }, 30000);
+
     return confirmationMessage;
   } catch (error) {
     logError('confirmGame', error, ctx);
@@ -97,7 +105,15 @@ const startGame = async (ctx, user, betAmount) => {
 
     // Check cooldown (10 seconds)
     if (currentTime - lastGame < COOLDOWN_TIME) {
-      return ctx.reply('❌ Please wait a few seconds before playing again.');
+      const cooldownMessage = await ctx.reply('❌ Please wait a few seconds before playing again.');
+      setTimeout(async () => {
+        try {
+          await ctx.deleteMessage(cooldownMessage.message_id);
+        } catch (error) {
+          logError('deleteCooldownMessage', error, ctx);
+        }
+      }, 5000);
+      return;
     }
 
     // Update the last game time
@@ -105,7 +121,15 @@ const startGame = async (ctx, user, betAmount) => {
 
     // Entry fee check
     if (user.balance < betAmount) {
-      return ctx.reply('❌ Insufficient balance! Please ensure you have enough funds to play.');
+      const balanceMessage = await ctx.reply('❌ Insufficient balance! Please ensure you have enough funds to play.');
+      setTimeout(async () => {
+        try {
+          await ctx.deleteMessage(balanceMessage.message_id);
+        } catch (error) {
+          logError('deleteBalanceMessage', error, ctx);
+        }
+      }, 5000);
+      return;
     }
 
     user.balance -= betAmount;
@@ -113,7 +137,15 @@ const startGame = async (ctx, user, betAmount) => {
 
     const admin = await User.findOne({ telegramId: ADMIN_ID });
     if (!admin) {
-      return ctx.reply('❌ Admin account not found. Please contact support.');
+      const adminMessage = await ctx.reply('❌ Admin account not found. Please contact support.');
+      setTimeout(async () => {
+        try {
+          await ctx.deleteMessage(adminMessage.message_id);
+        } catch (error) {
+          logError('deleteAdminMessage', error, ctx);
+        }
+      }, 5000);
+      return;
     }
 
     const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>
@@ -163,7 +195,16 @@ const startGame = async (ctx, user, betAmount) => {
       },
     };
 
-    await ctx.replyWithHTML(resultMessage, resultMarkup);
+    const resultMsg = await ctx.replyWithHTML(resultMessage, resultMarkup);
+
+    setTimeout(async () => {
+      try {
+        await ctx.deleteMessage(resultMsg.message_id);
+      } catch (error) {
+        logError('deleteResultMessage', error, ctx);
+      }
+    }, 30000);
+
   } catch (error) {
     logError('startGame', error, ctx);
   }
@@ -181,15 +222,23 @@ const playCommand = (bot) => {
 
       const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
 
-      const inlineKeyboard = betAmounts.map((amount) => [
-        { text: `₦${amount}`, callback_data: `bet_${amount}` },
-      ]);
+      const inlineKeyboard = [
+        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+      ];
 
-      await ctx.reply('💵 Please select the amount you want to bet:', {
+      const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
         reply_markup: {
           inline_keyboard: inlineKeyboard,
         },
       });
+
+      setTimeout(async () => {
+        try {
+          await ctx.deleteMessage(betMessage.message_id);
+        } catch (error) {
+          logError('deleteBetMessage', error, ctx);
+        }
+      }, 30000);
     } catch (error) {
       logError('playCommand', error, ctx);
     }
@@ -207,6 +256,7 @@ const playCommand = (bot) => {
       }
 
       await confirmGame(ctx, user, betAmount);
+      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
     } catch (error) {
       logError('bet action', error, ctx);
     }
@@ -224,23 +274,48 @@ const playCommand = (bot) => {
       }
 
       await startGame(ctx, user, betAmount);
+      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
     } catch (error) {
-      logError('startGame action', error, ctx);
+      logError('start_game action', error, ctx);
     }
   });
 
   bot.action('cancel_game', async (ctx) => {
     try {
-      await ctx.answerCbQuery('Game cancelled.');
-      await ctx.reply('❌ Game has been cancelled. You can type /play to start again.');
+      await ctx.answerCbQuery('Game canceled.');
+      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
     } catch (error) {
-      logError('cancelGame', error, ctx);
+      logError('cancel_game action', error, ctx);
     }
   });
 
-  bot.catch((error, ctx) => {
-    logError('Global Error Handler', error, ctx);
+  bot.action('play', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
+
+      const inlineKeyboard = [
+        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+      ];
+
+      const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
+        reply_markup: {
+          inline_keyboard: inlineKeyboard,
+        },
+      });
+
+      setTimeout(async () => {
+        try {
+          await ctx.deleteMessage(betMessage.message_id);
+        } catch (error) {
+          logError('deleteBetMessage', error, ctx);
+        }
+      }, 30000);
+    } catch (error) {
+      logError('play action', error, ctx);
+    }
   });
 };
 
 module.exports = playCommand;
+
