@@ -223,7 +223,8 @@ const playCommand = (bot) => {
       const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
 
       const inlineKeyboard = [
-        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+        betAmounts.slice(0, 3).map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
+        betAmounts.slice(3).map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
       ];
 
       const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
@@ -255,10 +256,22 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
+      if (betAmount <= 0) {
+        const invalidBetMessage = await ctx.reply('❌ Invalid bet amount. Please try again.');
+        setTimeout(async () => {
+          try {
+            await ctx.deleteMessage(invalidBetMessage.message_id);
+          } catch (error) {
+            logError('deleteInvalidBetMessage', error, ctx);
+          }
+        }, 5000);
+        return;
+      }
+
+      // Confirm the game with the bet amount
       await confirmGame(ctx, user, betAmount);
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
     } catch (error) {
-      logError('bet action', error, ctx);
+      logError('betAction', error, ctx);
     }
   });
 
@@ -266,6 +279,7 @@ const playCommand = (bot) => {
     try {
       await ctx.answerCbQuery();
       const betAmount = parseInt(ctx.match[1], 10);
+
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
 
@@ -273,49 +287,28 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
+      // Start the game with the provided bet amount
       await startGame(ctx, user, betAmount);
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
     } catch (error) {
-      logError('start_game action', error, ctx);
+      logError('startGameAction', error, ctx);
     }
   });
 
   bot.action('cancel_game', async (ctx) => {
     try {
-      await ctx.answerCbQuery('Game canceled.');
-      await ctx.deleteMessage(ctx.callbackQuery.message.message_id);
-    } catch (error) {
-      logError('cancel_game action', error, ctx);
-    }
-  });
-
-  bot.action('play', async (ctx) => {
-    try {
       await ctx.answerCbQuery();
-      const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
-
-      const inlineKeyboard = [
-        betAmounts.map((amount) => ({ text: `₦${amount}`, callback_data: `bet_${amount}` })),
-      ];
-
-      const betMessage = await ctx.reply('💵 Please select the amount you want to bet:', {
-        reply_markup: {
-          inline_keyboard: inlineKeyboard,
-        },
-      });
-
+      const cancelMessage = await ctx.reply('❌ Game cancelled.');
       setTimeout(async () => {
         try {
-          await ctx.deleteMessage(betMessage.message_id);
+          await ctx.deleteMessage(cancelMessage.message_id);
         } catch (error) {
-          logError('deleteBetMessage', error);
+          logError('deleteCancelMessage', error, ctx);
         }
-      }, 30000);
+      }, 5000);
     } catch (error) {
-      logError('play action', error, ctx);
+      logError('cancelGameAction', error, ctx);
     }
   });
 };
 
 module.exports = playCommand;
-
