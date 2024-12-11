@@ -34,7 +34,7 @@ const animatedDiceRoll = async (ctx) => {
 };
 
 const startGame = async (ctx, players) => {
-  try { //
+  try { // nn
     const [player1, player2] = players;
 
     await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${player1.username}</b> vs 👤 <b>${player2.username}</b>`);
