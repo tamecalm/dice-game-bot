@@ -170,7 +170,7 @@ const startGame = async (ctx, user, betAmount) => {
 };
 
 const playCommand = (bot) => {
-  bot.command('play', async (ctx) => {
+  bot.action('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
       const user = await User.findOne({ telegramId });
