@@ -90,7 +90,7 @@ Do you want to proceed?`,
       } catch (error) {
         logError('deleteConfirmationMessage', error);
       }
-    }, 30000);
+    }, 20000);
 
     return confirmationMessage;
   } catch (error) {
