@@ -7,11 +7,10 @@ const logError = (location, error, ctx) => {
   }
 };
 
-// 10-second cooldown for each user
-const COOLDOWN_TIME = 10000; // 10 seconds
-const LOSS_LIMIT = 500; // Daily loss limit
+// 1 minute cooldown for each user
+const COOLDOWN_TIME = 300000; // 1 minute
 const ADMIN_ID = settings.adminIds; // Admin's Telegram ID
-const COMMISSION_RATE = 0.1; // 10%
+const COMMISSION_RATE = 0.3; // 30%
 
 // Track last game time for each user
 const lastGameTime = {};
@@ -64,7 +63,34 @@ const rollDiceForBot = async (ctx) => {
   }
 };
 
-const startGame = async (ctx, user) => {
+const confirmGame = async (ctx, user, betAmount) => {
+  try {
+    const confirmationMessage = await ctx.replyWithHTML(
+      `🎮 <b>Game Confirmation</b>
+
+💵 <b>Bet Amount:</b> ${betAmount}
+🔹 <b>Your Balance:</b> ${user.balance}
+
+Do you want to proceed?`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Yes, Play', callback_data: `start_game_${betAmount}` },
+              { text: '❌ Cancel', callback_data: 'cancel_game' },
+            ],
+          ],
+        },
+      }
+    );
+
+    return confirmationMessage;
+  } catch (error) {
+    logError('confirmGame', error, ctx);
+  }
+};
+
+const startGame = async (ctx, user, betAmount) => {
   try {
     const currentTime = Date.now();
     const lastGame = lastGameTime[user.telegramId] || 0;
@@ -77,15 +103,9 @@ const startGame = async (ctx, user) => {
     // Update the last game time
     lastGameTime[user.telegramId] = currentTime;
 
-    // Entry fee and loss check
-    const betAmount = 100;
+    // Entry fee check
     if (user.balance < betAmount) {
-      return ctx.reply('❌ Insufficient balance! You need at least 100 to play.');
-    }
-
-    // Daily loss limit check
-    if (user.dailyLoss >= LOSS_LIMIT) {
-      return ctx.reply('❌ You have reached your daily loss limit. Please try again tomorrow.');
+      return ctx.reply('❌ Insufficient balance! Please ensure you have enough funds to play.');
     }
 
     user.balance -= betAmount;
@@ -96,7 +116,9 @@ const startGame = async (ctx, user) => {
       return ctx.reply('❌ Admin account not found. Please contact support.');
     }
 
-    const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>\n\n👤 <b>${user.username}</b> is rolling the dice!`);
+    const startMessage = await ctx.replyWithHTML(`🎮 <b>Game Start!</b>
+
+👤 <b>${user.username}</b> is rolling the dice!`);
 
     const playerRoll = await rollDiceForUser(ctx);
     if (playerRoll === null) return;
@@ -107,7 +129,6 @@ const startGame = async (ctx, user) => {
     if (botRoll === null) return;
 
     let resultMessage;
-    let dailyLoss = user.dailyLoss;
     let winAmount = 0;
 
     if (playerRoll > botRoll) {
@@ -115,24 +136,24 @@ const startGame = async (ctx, user) => {
       const commission = Math.floor(winAmount * COMMISSION_RATE);
       user.balance += winAmount - commission;
       admin.balance += commission;
-      resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!\n💰 <b>You won: ${winAmount - commission} (after commission).</b>`;
-      dailyLoss = Math.max(dailyLoss - betAmount, 0); // Reset loss if win
+      resultMessage = `🎉 <b>${user.username}</b> wins with a roll of ${playerRoll} against ${botRoll}!
+💰 <b>You won: ${winAmount - commission} (after commission).</b>`;
     } else if (botRoll > playerRoll) {
       admin.balance += betAmount;
-      dailyLoss += betAmount;
-      resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!\n💸 <b>Your bet has been added to admin's balance.</b>`;
+      resultMessage = `🤖 <b>Bot</b> wins with a roll of ${botRoll} against ${playerRoll}!
+💸 <b>Your bet has been added to admin's balance.</b>`;
     } else {
       user.balance += betAmount; // Refund the bet
       resultMessage = `🤝 It's a draw! Both rolled ${playerRoll}. Bet refunded.`;
     }
 
-    // Update daily loss, balance, and admin balance
-    user.dailyLoss = dailyLoss;
+    // Update balance
     await user.save();
     await admin.save();
 
     // Add new balance to result message
-    resultMessage += `\n🔹 <b>Your new balance: ${user.balance}</b>`;
+    resultMessage += `
+🔹 <b>Your new balance: ${user.balance}</b>`;
 
     const resultMarkup = {
       reply_markup: {
@@ -149,23 +170,6 @@ const startGame = async (ctx, user) => {
 };
 
 const playCommand = (bot) => {
-  bot.action('play', async (ctx) => {
-    try {
-      await ctx.answerCbQuery();
-
-      const telegramId = ctx.from.id;
-      const user = await User.findOne({ telegramId });
-
-      if (!user) {
-        return ctx.reply('❌ You are not registered. Use /start to register.');
-      }
-
-      await startGame(ctx, user);
-    } catch (error) {
-      logError('playCommand', error, ctx);
-    }
-  });
-
   bot.command('play', async (ctx) => {
     try {
       const telegramId = ctx.from.id;
@@ -175,9 +179,45 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
-      await startGame(ctx, user);
+      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
+
+      bot.on('text', async (ctx) => {
+        const betAmount = parseInt(ctx.message.text, 10);
+
+        if (isNaN(betAmount) || betAmount < 100 || betAmount > 5000) {
+          return ctx.reply('❌ Invalid amount. Please enter a value between 100 and 5000.');
+        }
+
+        await confirmGame(ctx, user, betAmount);
+      });
     } catch (error) {
       logError('playCommand', error, ctx);
+    }
+  });
+
+  bot.action(/start_game_(\d+)/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      const betAmount = parseInt(ctx.match[1], 10);
+      const telegramId = ctx.from.id;
+      const user = await User.findOne({ telegramId });
+
+      if (!user) {
+        return ctx.reply('❌ You are not registered. Use /start to register.');
+      }
+
+      await startGame(ctx, user, betAmount);
+    } catch (error) {
+      logError('startGame action', error, ctx);
+    }
+  });
+
+  bot.action('cancel_game', async (ctx) => {
+    try {
+      await ctx.answerCbQuery('Game cancelled.');
+      await ctx.reply('❌ Game has been cancelled. You can type /play to start again.');
+    } catch (error) {
+      logError('cancelGame', error, ctx);
     }
   });
 
