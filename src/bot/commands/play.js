@@ -179,24 +179,38 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
+      // Send prompt for bet amount
+      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
+
       const messageHandler = async (messageCtx) => {
         try {
           const betAmount = parseInt(messageCtx.message.text, 10);
 
-          if (isNaN(betAmount) || betAmount < 100 || betAmount > 5000) {
-            return messageCtx.reply('❌ Invalid amount. Please enter a value between 100 and 5000.');
+          if (isNaN(betAmount)) {
+            return messageCtx.reply('❌ Please enter a numeric value.');
+          }
+          if (betAmount < 100 || betAmount > 5000) {
+            return messageCtx.reply('❌ Invalid amount. Enter a value between 100 and 5000.');
           }
 
+          // Valid bet amount, proceed to confirmation
           await confirmGame(messageCtx, user, betAmount);
-          bot.removeListener('text', messageHandler); // Ensure only one response
+
+          // Remove listener after successful input
+          bot.removeListener('text', messageHandler);
         } catch (error) {
           logError('playCommand messageHandler', error, messageCtx);
         }
       };
 
+      // Add listener for the next user message
       bot.on('text', messageHandler);
 
-      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
+      // Set a timeout to remove the listener if no response is received
+      setTimeout(() => {
+        bot.removeListener('text', messageHandler);
+        ctx.reply('❌ Timeout! Please use /play again if you still want to play.');
+      }, 60000); // 1-minute timeout
     } catch (error) {
       logError('playCommand', error, ctx);
     }
