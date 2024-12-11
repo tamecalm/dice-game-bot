@@ -88,7 +88,7 @@ Do you want to proceed?`,
       try {
         await ctx.deleteMessage(confirmationMessage.message_id);
       } catch (error) {
-        logError('deleteConfirmationMessage', error, ctx);
+        logError('deleteConfirmationMessage', error);
       }
     }, 30000);
 
@@ -236,7 +236,7 @@ const playCommand = (bot) => {
         try {
           await ctx.deleteMessage(betMessage.message_id);
         } catch (error) {
-          logError('deleteBetMessage', error, ctx);
+          logError('deleteBetMessage', error);
         }
       }, 30000);
     } catch (error) {
@@ -308,7 +308,7 @@ const playCommand = (bot) => {
         try {
           await ctx.deleteMessage(betMessage.message_id);
         } catch (error) {
-          logError('deleteBetMessage', error, ctx);
+          logError('deleteBetMessage', error);
         }
       }, 30000);
     } catch (error) {
