@@ -179,40 +179,36 @@ const playCommand = (bot) => {
         return ctx.reply('❌ You are not registered. Use /start to register.');
       }
 
-      // Send prompt for bet amount
-      await ctx.reply('💵 Please enter the amount you want to bet (100 - 5000):');
+      const betAmounts = [100, 500, 1000, 1500, 2000, 3000];
 
-      const messageHandler = async (messageCtx) => {
-        try {
-          const betAmount = parseInt(messageCtx.message.text, 10);
+      const inlineKeyboard = betAmounts.map((amount) => [
+        { text: `₦${amount}`, callback_data: `bet_${amount}` },
+      ]);
 
-          if (isNaN(betAmount)) {
-            return messageCtx.reply('❌ Please enter a numeric value.');
-          }
-          if (betAmount < 100 || betAmount > 5000) {
-            return messageCtx.reply('❌ Invalid amount. Enter a value between 100 and 5000.');
-          }
-
-          // Valid bet amount, proceed to confirmation
-          await confirmGame(messageCtx, user, betAmount);
-
-          // Remove listener after successful input
-          bot.removeListener('text', messageHandler);
-        } catch (error) {
-          logError('playCommand messageHandler', error, messageCtx);
-        }
-      };
-
-      // Add listener for the next user message
-      bot.on('text', messageHandler);
-
-      // Set a timeout to remove the listener if no response is received
-      setTimeout(() => {
-        bot.removeListener('text', messageHandler);
-        ctx.reply('❌ Timeout! Please use /play again if you still want to play.');
-      }, 60000); // 1-minute timeout
+      await ctx.reply('💵 Please select the amount you want to bet:', {
+        reply_markup: {
+          inline_keyboard: inlineKeyboard,
+        },
+      });
     } catch (error) {
       logError('playCommand', error, ctx);
+    }
+  });
+
+  bot.action(/bet_(\d+)/, async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      const betAmount = parseInt(ctx.match[1], 10);
+      const telegramId = ctx.from.id;
+      const user = await User.findOne({ telegramId });
+
+      if (!user) {
+        return ctx.reply('❌ You are not registered. Use /start to register.');
+      }
+
+      await confirmGame(ctx, user, betAmount);
+    } catch (error) {
+      logError('bet action', error, ctx);
     }
   });
 
