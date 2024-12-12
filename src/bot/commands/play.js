@@ -8,9 +8,9 @@ const logError = (location, error, ctx) => {
 };
 
 // 1 Minute cooldown for each user
-const COOLDOWN_TIME = 300000; // 1 minute
+const COOLDOWN_TIME = 125000; // 1 minute
 const ADMIN_ID = settings.adminIds; // Admin's Telegram ID
-const COMMISSION_RATE = 0.3; // 30%
+const COMMISSION_RATE = 0.5; // 30%
 
 // Track last game time for each user
 const lastGameTime = {};
