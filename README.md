@@ -1,3 +1,5 @@
+<a href="https://www.buymeacoffee.com/tamecalm"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=tamecalm&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" /></a>
+
 # Dice Game Bot 🎲
 
 A versatile and customizable **Dice Game Bot** for **Telegram** that integrates advanced features, seamless user interaction, and robust functionality for managing games. This bot is designed for users looking for an interactive gaming experience, developers seeking to enhance or repurpose it, and businesses exploring innovative engagement strategies.
