@@ -54,5 +54,13 @@ This project is provided **as-is** for educational and experimental purposes. Th
 2. Install Dependencies
    ```bash
    npm install
+3. Create an .env file for secure configuration:
+   ```bash
+   touch .env
+4. Populate .env with your Flutterwave keys:
+   ```bash
+   check the config settings for 
+   what to populate
+5. 
 
 [![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in)
