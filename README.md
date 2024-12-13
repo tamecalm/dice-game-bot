@@ -51,6 +51,8 @@ This project is provided **as-is** for educational and experimental purposes. Th
    ```bash
    git clone https://github.com/yourusername/dice-game-bot.git
    cd dice-game-bot
-
+2. Install Dependencies
+   ```bash
+   npm install
 
 [![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in)
