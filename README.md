@@ -148,4 +148,7 @@ For full terms, see the [LICENSE](LICENSE) file.
 
 Authored by [John](https://instagram.com/tamecalm).
 
-[![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in)
+### Support & Updates ❤️❤️
+<a href="https://t.me/devforum"><img src="https://img.shields.io/badge/Join-Group%20Support-blue.svg?style=for-the-badge&logo=Telegram"></a> <a href="https://t.me/Error Explorer"><img src="https://img.shields.io/badge/Join-Updates%20Channel-blue.svg?style=for-the-badge&logo=Telegram"></a>
+
+[![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in) 
