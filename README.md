@@ -131,9 +131,9 @@ Contributions are welcome! To contribute:
 
 ## 📝 License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the **General Public License v3.0**
 
-### MIT License Summary:
+### GPL-3.0 License Summary:
 - **Permission:** You are free to use, modify, and distribute this project.
 - **Condition:** Include the original license and attribution in any distribution.
 - **Limitation:** No warranty or liability is provided.
