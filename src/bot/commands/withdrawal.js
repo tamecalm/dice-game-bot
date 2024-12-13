@@ -73,7 +73,7 @@ module.exports = (bot) => {
 
       // Replace with actual account details from the user
       const accountNumber = '0781292722'; // Example account
-      const accountBank = 'accessbank'; // Example bank code
+      const accountBank = '044'; // Example bank code
 
       // Initiate withdrawal via Flutterwave
       const vatFee = (DAILY_WITHDRAWAL_LIMIT * VAT_PERCENTAGE) / 100;
