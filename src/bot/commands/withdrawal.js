@@ -3,7 +3,7 @@ const User = require('../../models/User');
 const Flutterwave = require('flutterwave-node-v3');
 const settings = require('../../config/settings');
 
-const DAILY_WITHDRAWAL_LIMIT = 100; // Default withdrawal amount
+const DAILY_WITHDRAWAL_LIMIT = 98; // Default withdrawal amount
 const VAT_PERCENTAGE = 0.5; // VAT fee percentage
 
 // Initialize Flutterwave SDK
