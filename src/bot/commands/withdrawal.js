@@ -3,7 +3,7 @@ const User = require('../../models/User');
 const Flutterwave = require('flutterwave-node-v3');
 const settings = require('../../config/settings');
 
-const DAILY_WITHDRAWAL_LIMIT = 50; // Reduced minimum withdrawal amount
+const DAILY_WITHDRAWAL_LIMIT = 100; // Default withdrawal amount
 const VAT_PERCENTAGE = 7.5; // VAT fee percentage
 
 // Initialize Flutterwave SDK
@@ -71,9 +71,9 @@ module.exports = (bot) => {
         );
       }
 
-      // Replace with test account details
-      const accountNumber = '0781292722'; // Test account number
-      const accountBank = 'accessbank'; // Test bank code
+      // Replace with actual account details from the user
+      const accountNumber = '0781292722'; // Example account
+      const accountBank = 'accessbank'; // Example bank code
 
       // Initiate withdrawal via Flutterwave
       const vatFee = (DAILY_WITHDRAWAL_LIMIT * VAT_PERCENTAGE) / 100;
