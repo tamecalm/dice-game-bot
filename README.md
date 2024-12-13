@@ -1,6 +1,6 @@
 # Dice Game Bot 🎲
 
-A versatile and customizable **Dice Game Bot** that integrates advanced features, seamless user interaction, and robust functionality for managing games. This bot is designed for users looking for an interactive gaming experience, developers seeking to enhance or repurpose it, and businesses exploring innovative engagement strategies.
+A versatile and customizable **Dice Game Bot** for **Telegram** that integrates advanced features, seamless user interaction, and robust functionality for managing games. This bot is designed for users looking for an interactive gaming experience, developers seeking to enhance or repurpose it, and businesses exploring innovative engagement strategies.
 
 > ⚠️ **Disclaimer**:  
 This project is provided **as-is** for educational and experimental purposes. The original author is **not liable** for any unlawful use, such as scam-related activities or fraudulent purposes, if the code is modified or deployed improperly.
