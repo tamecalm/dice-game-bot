@@ -139,4 +139,10 @@ This project is licensed under the **MIT License**.
 
 For full terms, see the [LICENSE](LICENSE) file.
 
+---
+
+## 📌 Attribution
+
+Authored by [John](https://instagram.com/tamecalm).
+
 [![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in)
