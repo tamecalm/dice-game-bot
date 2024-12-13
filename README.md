@@ -14,7 +14,7 @@ This project is provided **as-is** for educational and experimental purposes. Th
 - [📦 Setup and Installation](#-setup-and-installation)  
 - [🚀 How It Works](#-how-it-works)  
 - [💡 Usage](#-usage)  
-- [⚠️ Disclaimer](#-disclaimer)  
+- [☣️ Disclaimer](#-disclaimer)  
 - [🤝 Contributing](#-contributing)  
 - [📝 License](#-license)
 - [📌 Attribution](#-attribution)
@@ -104,7 +104,7 @@ Follow bot prompts to start rolling dice.
 
 ---
 
-## ⚠️ Disclaimer
+## ☣️ Disclaimer
 
 The bot's code is open-source and provided for **educational purposes only.** By using or modifying this code, you agree:
 - The author is not responsible for any unlawful use of the bot.
