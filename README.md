@@ -118,19 +118,25 @@ Contributions are welcome! To contribute:
 2. Create a feature branch:  
    ```bash
    git checkout -b feature-name
+3. Commit your changes: 
+   ```bash
+   git commit -m "Add new feature"
+4. Push the branch: 
+   ```bash
+   git push origin feature-name
+5. Submit a pull request. 
 
+---
 
+## 📝 License
 
+This project is licensed under the **MIT License**.
 
+### MIT License Summary:
+- **Permission:** You are free to use, modify, and distribute this project.
+- **Condition:** Include the original license and attribution in any distribution.
+- **Limitation:** No warranty or liability is provided.
 
-
-
-
-
-
-
-
-
-
+For full terms, see the [LICENSE](LICENSE) file.
 
 [![](https://visitcount.itsvg.in/api?id=tamecalm&label=Page%20Views&pretty=true)](https://visitcount.itsvg.in)
