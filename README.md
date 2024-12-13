@@ -10,13 +10,14 @@ This project is provided **as-is** for educational and experimental purposes. Th
 ## 📋 Table of Contents
 
 - [✨ Features](#-features)  
-- [Technologies Used](#technologies-used)  
-- [Setup and Installation](#setup-and-installation)  
-- [How It Works](#how-it-works)  
-- [Usage](#usage)  
-- [Disclaimer](#disclaimer)  
-- [Contributing](#contributing)  
-- [License](#license)
+- [🛠️ Technologies Used](#-technologies-used)  
+- [📦 Setup and Installation](#-setup-and-installation)  
+- [🚀 How It Works](#-how-it-works)  
+- [💡 Usage](#-usage)  
+- [⚠️ Disclaimer](#-disclaimer)  
+- [🤝 Contributing](#-contributing)  
+- [📝 License](#-license)
+- [📌 Attribution](#-attribution)
 
 ---
 
