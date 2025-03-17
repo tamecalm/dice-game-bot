@@ -16,43 +16,91 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-let waitingPlayers = []; // Holds players waiting for a match
+// utils/matchmaking.js
+
+const waitingPlayers = []; // Holds players waiting for a match
 const TIMEOUT_MS = 30000; // 30 seconds timeout
 
-module.exports = {
-  joinQueue: (player) => {
-    // Add player to the waiting queue
-    waitingPlayers.push(player);
-
-    console.log(`DEBUG: Player ${player.username} joined the queue.`);
-
-    // Check if at least two players are available for a match
-    if (waitingPlayers.length >= 2) {
-      // Match the first two players in the queue and remove them
-      const matchedPlayers = waitingPlayers.splice(0, 2);
-      console.log(`DEBUG: Matched players: ${matchedPlayers.map(p => p.username).join(' vs ')}`);
-      return matchedPlayers;
-    }
-
-    // Set a timeout to remove player from queue if no match is found
-    setTimeout(() => {
-      const index = waitingPlayers.findIndex(p => p.telegramId === player.telegramId);
-      if (index !== -1) {
-        waitingPlayers.splice(index, 1); // Remove player from the queue
-        console.log(`DEBUG: Player ${player.username} removed from queue due to timeout.`);
+// Assuming bot is passed or imported for notifications
+export default (bot) => {
+  return {
+    // Join the matchmaking queue
+    joinQueue: (player) => {
+      if (!player || !player.telegramId || !player.username) {
+        console.error('Invalid player object provided to joinQueue');
+        return null;
       }
-    }, TIMEOUT_MS);
 
-    return null;
-  },
+      // Prevent duplicate entries
+      if (waitingPlayers.some((p) => p.telegramId === player.telegramId)) {
+        console.log(`DEBUG: Player ${player.username} is already in the queue.`);
+        return null;
+      }
 
-  leaveQueue: (playerId) => {
-    // Remove the player from the queue
-    waitingPlayers = waitingPlayers.filter(player => player.telegramId !== playerId);
-    console.log(`DEBUG: Player with ID ${playerId} left the queue.`);
-  }
+      waitingPlayers.push(player);
+      console.log(`DEBUG: Player ${player.username} (ID: ${player.telegramId}) joined the queue.`);
+
+      // Check for a match
+      if (waitingPlayers.length >= 2) {
+        const matchedPlayers = waitingPlayers.splice(0, 2);
+        console.log(
+          `DEBUG: Matched players: ${matchedPlayers.map((p) => p.username).join(' vs ')}`
+        );
+
+        // Notify matched players
+        matchedPlayers.forEach((p) => {
+          bot.telegram.sendMessage(
+            p.telegramId,
+            `🎮 **Match Found!**\n\nYou’re playing against ${matchedPlayers.find((op) => op.telegramId !== p.telegramId).username}. Get ready!`,
+            { parse_mode: 'Markdown' }
+          ).catch((err) => console.error(`Failed to notify ${p.username}:`, err.message));
+        });
+
+        return matchedPlayers;
+      }
+
+      // Set timeout for removal if no match is found
+      setTimeout(() => {
+        const index = waitingPlayers.findIndex((p) => p.telegramId === player.telegramId);
+        if (index !== -1) {
+          waitingPlayers.splice(index, 1);
+          console.log(`DEBUG: Player ${player.username} (ID: ${player.telegramId}) timed out.`);
+          bot.telegram.sendMessage(
+            player.telegramId,
+            `⏳ **Matchmaking Timeout**\n\nNo opponent found within ${TIMEOUT_MS / 1000} seconds. Try again!`,
+            { parse_mode: 'Markdown' }
+          ).catch((err) => console.error(`Failed to notify ${player.username}:`, err.message));
+        }
+      }, TIMEOUT_MS);
+
+      return null;
+    },
+
+    // Leave the matchmaking queue
+    leaveQueue: (playerId) => {
+      const playerIndex = waitingPlayers.findIndex((p) => p.telegramId === playerId);
+      if (playerIndex === -1) {
+        console.log(`DEBUG: Player with ID ${playerId} not found in queue.`);
+        return false;
+      }
+
+      const [player] = waitingPlayers.splice(playerIndex, 1);
+      console.log(`DEBUG: Player ${player.username} (ID: ${playerId}) left the queue.`);
+      
+      // Notify the player
+      bot.telegram.sendMessage(
+        playerId,
+        `👋 **Left Queue**\n\nYou’ve been removed from matchmaking.`,
+        { parse_mode: 'Markdown' }
+      ).catch((err) => console.error(`Failed to notify ${player.username}:`, err.message));
+
+      return true;
+    },
+
+    // Get current queue size (optional utility)
+    getQueueSize: () => waitingPlayers.length,
+  };
 };
-
 
 // ==========================================================================
 // Contact: 

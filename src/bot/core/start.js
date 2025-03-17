@@ -16,14 +16,13 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-const { Markup } = require('telegraf');
-const User = require('../../models/User');
-const settings = require('../../config/settings'); // Import admin ID settings
+import { Markup } from 'telegraf'; // ES6 import (assumes you're using a module system)
+import User from '../../models/User.js'; // Adjusted to ES6 import with .js extension
 
-module.exports = (bot) => {
+export default (bot) => {
   bot.command('start', async (ctx) => {
     try {
-      // Validate the context object
+      // Validate context
       if (!ctx || typeof ctx.reply !== 'function') {
         console.error('Invalid context object received in start.js.');
         return;
@@ -39,81 +38,79 @@ module.exports = (bot) => {
         return;
       }
 
-      // Find the user in the database or create a new one
+      // Find or create user
       let user = await User.findOne({ telegramId });
       let welcomeMessage;
-      let inlineButtonsArray;
 
       if (!user) {
-        user = new User({ telegramId, username });
+        // Initialize new user with all schema fields
+        user = new User({
+          telegramId,
+          username,
+          balance: 0,
+          currency: 'NGN',
+          totalDeposits: 0,
+          gamesPlayed: 0,
+          country: null, // Will be set later if you add logic for it
+          referralCode: null, // Generate this if you have a function for it
+          referredBy: null,
+          state: null,
+          tempAmount: null,
+          usdtAddress: null,
+          referralEarnings: 0,
+          lastLogin: new Date(), // Set on creation
+          firstDeposit: null,
+        });
         await user.save();
         console.log(`New user registered: ${username} (ID: ${telegramId})`);
 
         welcomeMessage = `
 🎲 **Welcome to Bet The Dice!** 🎲
 
-👋 Hi, **${username}**, you've been successfully registered.  
+Hello **${username}**! You're now part of the game.  
+Roll the dice, place your bets, and win big!  
 
-Here's what you can do:
-💰 **Deposit Funds**  
-🎮 **Play and Bet**  
-📊 **Check Your Balance**  
-👥 **Refer Friends**  
-🏦 **Withdraw Your Winnings**`;
+✨ **What’s Next?**  
+- Deposit funds to start playing  
+- Invite friends to earn rewards  
+- Check your balance anytime  
 
-        inlineButtonsArray = [
-          [Markup.button.callback('💰 Deposit', 'deposit'), Markup.button.callback('🎮 Play', 'play')],
-          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
-          [Markup.button.callback('👥 Referral', 'referral')],
-        ];
+Ready to dive in? Use the menu below to get started!
+        `;
       } else {
+        // Update lastLogin for returning user
+        user.lastLogin = new Date();
+        await user.save();
         console.log(`Returning user: ${username} (ID: ${telegramId})`);
 
         welcomeMessage = `
 🎲 **Welcome Back to Bet The Dice!** 🎲
 
-👋 Hello again, **${username}**!  
-Ready to roll the dice and win big? Here's what you can do:
-💰 **Deposit More Funds**  
-🎮 **Find an Opponent and Play**  
-📊 **View Your Current Balance**  
-👥 **Refer Friends for Rewards**  
-🏦 **Withdraw Your Winnings**`;
+Hey **${username}**! Great to see you again.  
+Your next big win is just a roll away!  
 
-        inlineButtonsArray = [
-          [Markup.button.callback('🎮 Play', 'play'), Markup.button.callback('💰 Deposit', 'deposit')],
-          [Markup.button.callback('📊 Balance', 'balance'), Markup.button.callback('🏦 Withdrawal', 'withdrawal')],
-          [Markup.button.callback('👥 Referral', 'referral')],
-        ];
+💰 **Balance:** ${user.balance} ${user.currency}  
+🎮 **Games Played:** ${user.gamesPlayed}  
+
+Pick an option below and let’s roll!
+        `;
       }
 
-      // Add admin options if the user is an admin
-      if (settings.adminIds.includes(telegramId)) {
-        welcomeMessage += `
+      // Single "Close" button with 'clear' callback
+      const inlineButtons = Markup.inlineKeyboard([
+        [Markup.button.callback('✖️ Close', 'clear')],
+      ]);
 
-🛠 **Admin Panel**  
-Manage and monitor your bot with admin tools.`;
-
-        // Append the admin button to the inline buttons array
-        inlineButtonsArray.push([Markup.button.callback('🛠 Admin Panel', 'admin')]);
-      }
-
-      // Create the keyboard with the updated buttons array
-      const inlineButtons = Markup.inlineKeyboard(inlineButtonsArray);
-
-      // Send the welcome message with inline buttons
+      // Send welcome message with improved UI
       await ctx.replyWithMarkdown(welcomeMessage, inlineButtons);
     } catch (error) {
       console.error('Error in start command:', error.message);
-
-      // Send an error message to the user if possible
       if (ctx && typeof ctx.reply === 'function') {
-        await ctx.reply('⚠️ An unexpected error occurred. Please try again later.');
+        await ctx.reply('⚠️ Oops! Something went wrong. Try again later.');
       }
     }
   });
 };
-
 
 // ==========================================================================
 // Contact: 

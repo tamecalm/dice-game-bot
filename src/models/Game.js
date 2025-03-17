@@ -16,29 +16,34 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
-const gameSchema = new mongoose.Schema({
-  players: [
-    {
+const gameSchema = new mongoose.Schema(
+  {
+    players: [
+      {
+        telegramId: { type: String, required: true },
+        username: { type: String, required: true },
+        roll: { type: Number, required: true }, // Dice roll result
+        betAmount: { type: Number, required: true }, // Amount the player bet
+      },
+    ],
+    winner: {
       telegramId: { type: String, required: true },
       username: { type: String, required: true },
-      roll: { type: Number, required: true }, // Dice roll result
-      betAmount: { type: Number, required: true }, // Amount the player bet
+      amountWon: { type: Number, required: true }, // Amount the winner takes home
     },
-  ],
-  winner: {
-    telegramId: { type: String, required: true },
-    username: { type: String, required: true },
-    amountWon: { type: Number, required: true }, // Amount the winner takes home
+    createdAt: { type: Date, default: Date.now, index: true }, // Indexed for faster queries
   },
-  createdAt: { type: Date, default: Date.now, index: true }, // Indexed for faster queries
-});
+  { collection: "Dice" } // 👈 Ensuring the collection name is explicitly set to "Dice"
+);
 
 // Indexing the schema for faster lookups and sorting
 gameSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model('Game', gameSchema);
+const Game = mongoose.model("Game", gameSchema);
+
+export default Game;
 
 
 // ==========================================================================

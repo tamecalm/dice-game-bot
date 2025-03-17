@@ -16,53 +16,22 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-require('dotenv').config();
+import dotenv from "dotenv";
+dotenv.config();
 
-module.exports = {
-  // Telegram Bot Token
-  botToken: process.env.TELEGRAM_BOT_TOKEN,
-  // MongoDB Connection URI
-  dbUri: process.env.MONGO_URI,
-  // Admin User IDs
-  adminIds: process.env.ADMIN_ID,
-  // Default Currency for Transactions
-  defaultCurrency: process.env.DEFAULT_CURRENCY,
-  // Minimum Deposit Amount
-  minimumDeposit: 100, // In the default currency
-  // Minimum Bet Amount
-  minBet: 1000, // In the default currency
-  // Maximum Bet Amount
-  maxBet: 5000, // In the default currency
-  // Timeout for Matchmaking (in seconds)
-  matchMakingTimeout: 20,
-  // Value Added Tax (VAT) Rate
-  vatRate: 5, // Percentage
-  // Flutterwave Public Key
-  flutterwavePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY,
-  // Flutterwave Secret Key
-  flutterwaveSecretKey: process.env.FLUTTERWAVE_SECRET_KEY,
-  // Paystack Secret Key
-  paystackSecretKey: process.env.PAYSTACK_SECRET_KEY
-};
-
-/*
-module.exports = {
+export default {
   botToken: process.env.TELEGRAM_BOT_TOKEN,
   dbUri: process.env.MONGO_URI,
-  adminIds: process.env.ADMIN_ID,
+  adminIds: process.env.ADMIN_ID?.split(",") || [], // Converts to an array
   defaultCurrency: process.env.DEFAULT_CURRENCY,
-  minimumDeposit: 1,
+  minimumDeposit: 100,
   minBet: 1000,
   maxBet: 5000,
   matchMakingTimeout: 20,
-  vatRate: 5, // VAT percentage
-  flutterwavePublicKey:
-  flutterwaveSecretKey:
-  paystackSecretKey: process.env.PAYSTACK_SECRET_KEY
+  vatRate: 5,
+  flutterwavePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY,
+  flutterwaveSecretKey: process.env.FLUTTERWAVE_SECRET_KEY,
 };
-
-*/
-
 
 // ==========================================================================
 // Contact: 

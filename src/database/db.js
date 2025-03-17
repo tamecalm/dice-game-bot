@@ -16,15 +16,26 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-const mongoose = require('mongoose');
-const settings = require('./settings');
+import mongoose from "mongoose";
+import settings from "../config/settings.js";
 
-module.exports = async () => {
-  await mongoose.connect(settings.dbUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
+const connectDb = async () => {
+  try {
+    await mongoose.connect(settings.dbUri, {
+    });
+
+    // Force a default collection name `Dice`
+    mongoose.connection.on("connected", () => {
+      console.log("🛠 Using custom collection name: Dice");
+    });
+
+  } catch (error) {
+    console.error("❌ Database connection error:", error);
+    process.exit(1);
+  }
 };
+
+export default connectDb;
 
 // ==========================================================================
 // Contact: 
