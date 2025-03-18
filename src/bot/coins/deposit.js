@@ -1,22 +1,3 @@
-// ==========================================================================
-// Dice Game Bot Project - Script Header
-// ==========================================================================
-//
-// Project: Dice Game Bot
-// Repository: https://github.com/tamecalm/dice-game-bot
-// 
-// Description: 
-// A robust and extensible module designed for a multiplayer dice game bot. 
-// Feel free to use, modify, or contribute to the project under the terms of the repository's license.
-//
-// Author: Engr John! 🧑‍💻
-// Year: 2024
-// 
-// License: Licensed under the terms of the repository's license. Unauthorized duplication, 
-// Modification, or distribution of this script outside the license terms is prohibited.
-// ==========================================================================
-
-import axios from 'axios'; // ES6 import
 import User from '../../models/User.js'; // ES6 import
 import Flutterwave from 'flutterwave-node-v3'; // ES6 import
 import settings from '../../config/settings.js'; // ES6 import
@@ -30,7 +11,7 @@ const flw = new Flutterwave(
 // State management for deposit process
 const userDepositState = {};
 
-export default (bot) => {
+export function setupDeposit(bot) {
   // Initiate deposit process
   bot.action('deposit', async (ctx) => {
     const userId = ctx.from.id;
@@ -195,12 +176,4 @@ export default (bot) => {
       await ctx.reply('⚠️ Error cancelling deposit. Try again.');
     }
   });
-};
-
-// ==========================================================================
-// Contact: 
-// If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
-//
-// Contributions are highly encouraged to help improve and expand this project. Let's 
-// Make it better together. Happy coding! 💡
-// ==========================================================================
+}

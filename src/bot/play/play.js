@@ -1,70 +1,64 @@
-// ==========================================================================
-// Dice Game Bot Project - Script Header
-// ==========================================================================
-//
-// Project: Dice Game Bot
-// Repository: https://github.com/tamecalm/dice-game-bot
-// 
-// Description: 
-// A robust and extensible module designed for a multiplayer dice game bot. 
-// Feel free to use, modify, or contribute to the project under the terms of the repository's license.
-//
-// Author: Engr John! 🧑‍💻
-// Year: 2024
-// 
-// License: Licensed under the terms of the repository's license. Unauthorized duplication, 
-// Modification, or distribution of this script outside the license terms is prohibited.
-// ==========================================================================
+import { Markup } from 'telegraf';
+import playPvC from '../gameModes/playPvC.js'; // Ensure this file exists and exports a function
+import playPvP from '../gameModes/playPvP.js'; // Ensure this file exists and exports a function
 
-// bot/commands/play.js
-// play.js
-import { Markup } from 'telegraf'; // ES6 import
+// Reusable function to send game mode selection
+const getPlayMessage = async (ctx) => {
+  try {
+    console.log(`📩 /play command received from: ${ctx.from?.id} (${ctx.from?.username})`);
+    
+    const text = `🎲 **Choose Your Game Mode**\n\nPick how you’d like to play:`;
+    const options = {
+      reply_markup: {
+        inline_keyboard: [
+          [Markup.button.callback('🤖 Vs Computer', 'play_pvc')],
+          [Markup.button.callback('👥 Vs Player', 'play_pvp')],
+        ],
+      },
+    };
 
-async function setupPlay(bot) {
-  // Handle /play command to show mode selection
+    console.log(`✅ Prepared game mode selection for ${ctx.from?.id}`);
+    return { text, options };
+  } catch (error) {
+    console.error('❌ Error preparing play message:', error);
+    return {
+      text: '⚠️ Something went wrong. Try again later.',
+      options: null,
+    };
+  }
+};
+
+export function setupPlay(bot) {
+  // Command handler for "/play"
   bot.command('play', async (ctx) => {
+    console.log(`🔧 Executing /play command for ${ctx.from?.id}`);
+    const { text, options } = await getPlayMessage(ctx);
+    await ctx.replyWithMarkdown(text, options);
+  });
+
+  // Inline button handler for "Vs Computer"
+  bot.action('play_pvc', async (ctx) => {
     try {
-      await ctx.replyWithMarkdown(
-        `🎲 **Choose Your Game Mode**\n\n` +
-          `Pick how you’d like to play:`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                Markup.button.callback('🤖 Vs Computer', 'play_pvc'),
-                Markup.button.callback('👥 Vs Player', 'play_pvp'),
-              ],
-            ],
-          },
-        }
-      );
+      await ctx.answerCbQuery();
+      console.log(`▶️ Starting PvC for ${ctx.from?.id}`);
+      await playPvC(ctx); // Call the PvC handler
     } catch (error) {
-      console.error('Error in /play command:', error.message);
-      await ctx.reply('⚠️ Something went wrong. Try again later.');
+      console.error('❌ Error in play_pvc action:', error);
+      await ctx.reply('⚠️ Something went wrong in PvC mode.');
     }
   });
 
-  // Delegate to PvC mode
-  bot.action('play_pvc', async (ctx) => {
-    await ctx.answerCbQuery();
-    const pvcHandler = (await import('../gameModes/playPvC.js')).default;
-    pvcHandler(ctx); // Call PvC handler directly
-  });
-
-  // Delegate to PvP mode
+  // Inline button handler for "Vs Player"
   bot.action('play_pvp', async (ctx) => {
-    await ctx.answerCbQuery();
-    const pvpHandler = (await import('../gameModes/playPvP.js')).default;
-    pvpHandler(ctx); // Call PvP handler directly
+    try {
+      await ctx.answerCbQuery();
+      console.log(`▶️ Starting PvP for ${ctx.from?.id}`);
+      await playPvP(ctx); // Call the PvP handler
+    } catch (error) {
+      console.error('❌ Error in play_pvp action:', error);
+      await ctx.reply('⚠️ Something went wrong in PvP mode.');
+    }
   });
 }
 
 export default setupPlay;
-
-// ==========================================================================
-// Contact: 
-// If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
-//
-// Contributions are highly encouraged to help improve and expand this project. Let's 
-// Make it better together. Happy coding! 💡
-// ==========================================================================

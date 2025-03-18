@@ -1,5 +1,5 @@
 // bot/commands/gameModes/playPvP.js
-import User from '../../../models/User.js'; // Adjust path
+import User from '../../models/User.js'; // Adjust path
 import settings from '../../config/settings.js'; // Adjust path
 import createMatchmaking from '../../utils/matchmaking.js'; // Adjust path
 

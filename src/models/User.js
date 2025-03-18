@@ -16,17 +16,17 @@
 // Modification, or distribution of this script outside the license terms is prohibited.
 // ==========================================================================
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema(
   {
     telegramId: { type: String, required: true, unique: true },
     username: { type: String },
     balance: { type: Number, default: 0 },
-    currency: { type: String, default: "NGN" },
+    currency: { type: String, default: 'NGN' },
     totalDeposits: { type: Number, default: 0 },
     gamesPlayed: { type: Number, default: 0 },
-    country: { type: String }, // New field to store the user's country
+    country: { type: String }, // User's country
     referralCode: { type: String },
     referredBy: { type: String }, // User ID of the referrer, if applicable
     state: { type: String }, // Track current user state (e.g., 'withdrawing', 'depositing')
@@ -35,14 +35,19 @@ const userSchema = new mongoose.Schema(
     referralEarnings: { type: Number, default: 0 }, // Total referral earnings
     lastLogin: { type: Date }, // Last login timestamp
     firstDeposit: { type: Date }, // First deposit timestamp (used for referral rewards)
+    // New fields for win/loss tracking and streaks
+    wins: { type: Number, default: 0 }, // Total wins
+    losses: { type: Number, default: 0 }, // Total losses
+    ties: { type: Number, default: 0 }, // Total ties
+    winStreak: { type: Number, default: 0 }, // Current win streak
+    lossStreak: { type: Number, default: 0 }, // Current loss streak
   },
-  { collection: "Dice" } // 👈 Ensuring the collection name is explicitly set to "Dice"
+  { collection: 'Dice' } // Explicitly set collection name to "Dice"
 );
 
-const User = mongoose.model("User", userSchema);
+const User = mongoose.model('User', userSchema);
 
 export default User;
-
 
 // ==========================================================================
 // Contact: 

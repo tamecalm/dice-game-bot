@@ -1,29 +1,10 @@
-// ==========================================================================
-// Dice Game Bot Project - Script Header
-// ==========================================================================
-//
-// Project: Dice Game Bot
-// Repository: https://github.com/tamecalm/dice-game-bot
-// 
-// Description: 
-// A robust and extensible module designed for a multiplayer dice game bot. 
-// Feel free to use, modify, or contribute to the project under the terms of the repository's license.
-//
-// Author: Engr John! 🧑‍💻
-// Year: 2024
-// 
-// License: Licensed under the terms of the repository's license. Unauthorized duplication, 
-// Modification, or distribution of this script outside the license terms is prohibited.
-// ==========================================================================
-
 import { Markup } from 'telegraf'; // ES6 import
 import User from '../../models/User.js'; // ES6 import
-import settings from '../../config/settings.js'; // ES6 import
 
 const REFERRAL_PERCENTAGE = 20; // Reward percentage for referrals
 const MIN_DEPOSIT = 500; // Minimum deposit to qualify for rewards
 
-export default (bot) => {
+export function setupReferral(bot) {
   // Handle referral info display
   bot.action('referral', async (ctx) => {
     try {
@@ -110,62 +91,4 @@ export default (bot) => {
 
     return next(); // Pass to start.js for welcome message
   });
-
-  // Handle deposit and reward logic
-  bot.command('deposit', async (ctx) => {
-    try {
-      const telegramId = ctx.from.id;
-      const depositAmount = parseFloat(ctx.message.text.split(' ')[1]);
-
-      if (isNaN(depositAmount) || depositAmount <= 0) {
-        return ctx.replyWithMarkdown('❌ **Invalid Amount**\nPlease enter a valid deposit (e.g., /deposit 1000).');
-      }
-
-      const user = await User.findOne({ telegramId });
-      if (!user) {
-        return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to register.');
-      }
-
-      // Simulate deposit (replace with actual payment integration)
-      user.balance += depositAmount;
-      user.totalDeposits += depositAmount;
-      if (!user.firstDeposit) user.firstDeposit = new Date();
-      await user.save();
-
-      // Handle referral reward
-      if (user.referredBy && !user.firstDeposit && depositAmount >= MIN_DEPOSIT) {
-        const referrer = await User.findOne({ referralCode: user.referredBy });
-        if (referrer) {
-          const reward = (depositAmount * REFERRAL_PERCENTAGE) / 100;
-          referrer.referralEarnings += reward;
-          referrer.balance += reward;
-          await referrer.save();
-
-          await bot.telegram.sendMessage(
-            referrer.telegramId,
-            `💰 **Referral Bonus!**\n\n` +
-              `🎉 You earned ${reward.toFixed(2)} ${user.currency} from **${ctx.from.username || 'your referral'}**’s deposit of ${depositAmount} ${user.currency}!`,
-            { parse_mode: 'Markdown' }
-          );
-        }
-      }
-
-      return ctx.replyWithMarkdown(
-        `✅ **Deposit Successful!**\n\n` +
-          `💳 **Amount:** ${depositAmount.toFixed(2)} ${user.currency}\n` +
-          `💰 **New Balance:** ${user.balance.toFixed(2)} ${user.currency}`
-      );
-    } catch (error) {
-      console.error('Error in deposit command:', error.message);
-      return ctx.reply('⚠️ Something went wrong. Please try again later.');
-    }
-  });
-};
-
-// ==========================================================================
-// Contact: 
-// If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
-//
-// Contributions are highly encouraged to help improve and expand this project. Let's 
-// Make it better together. Happy coding! 💡
-// ==========================================================================
+}

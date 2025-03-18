@@ -1,34 +1,17 @@
-// ==========================================================================
-// Dice Game Bot Project - Script Header
-// ==========================================================================
-//
-// Project: Dice Game Bot
-// Repository: https://github.com/tamecalm/dice-game-bot
-// 
-// Description: 
-// A robust and extensible module designed for a multiplayer dice game bot. 
-// Feel free to use, modify, or contribute to the project under the terms of the repository's license.
-//
-// Author: Engr John! 🧑‍💻
-// Year: 2024
-// 
-// License: Licensed under the terms of the repository's license. Unauthorized duplication, 
-// Modification, or distribution of this script outside the license terms is prohibited.
-// ==========================================================================
-
+// src/bot/owner/admin.js
 import { Markup } from 'telegraf'; // ES6 import
 import User from '../../models/User.js'; // ES6 import
 import Game from '../../models/Game.js'; // ES6 import
-import Admin from '../../models/Admin.js'; // ES6 import (unused here but kept for consistency)
+import Admin from '../../models/Admin.js'; // ES6 import (unused but kept for consistency)
 import settings from '../../config/settings.js'; // ES6 import
 import moment from 'moment'; // ES6 import
 
-export default (bot) => {
+export function setupAdmin(bot) {
   // Check if user is an admin
   const isAdmin = (ctx) => settings.adminIds.includes(ctx.from.id);
 
   // Admin Panel entry point
-  bot.action('admin', async (ctx) => {
+  bot.command('admin', async (ctx) => {
     try {
       if (!isAdmin(ctx)) {
         return ctx.answerCbQuery('❌ Unauthorized access.', { show_alert: true });
@@ -194,12 +177,4 @@ export default (bot) => {
       await ctx.answerCbQuery('⚠️ Something went wrong.', { show_alert: true });
     }
   });
-};
-
-// ==========================================================================
-// Contact: 
-// If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
-//
-// Contributions are highly encouraged to help improve and expand this project. Let's 
-// Make it better together. Happy coding! 💡
-// ==========================================================================
+}

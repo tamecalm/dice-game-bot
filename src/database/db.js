@@ -21,14 +21,21 @@ import settings from "../config/settings.js";
 
 const connectDb = async () => {
   try {
-    await mongoose.connect(settings.dbUri, {
-    });
+    // Force the database name to "DiceLand"
+    const dbUri = `${settings.dbUri}/DiceLand`;
 
-    // Force a default collection name `Dice`
-    mongoose.connection.on("connected", () => {
-      console.log("🛠 Using custom collection name: Dice");
-    });
+    await mongoose.connect(dbUri, {});
 
+    console.log("✅ Connected to MongoDB: DiceLand");
+
+    // Ensure the database is created by inserting a dummy record into an 'init' collection
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+
+    if (collections.length === 0) {
+      await db.collection("init").insertOne({ createdAt: new Date() });
+      console.log("📌 Database initialized with a dummy record.");
+    }
   } catch (error) {
     console.error("❌ Database connection error:", error);
     process.exit(1);

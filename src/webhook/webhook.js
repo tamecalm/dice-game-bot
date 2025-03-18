@@ -20,7 +20,7 @@ import express from 'express'; // ES6 import
 import User from '../models/User.js'; // ES6 import
 import crypto from 'crypto'; // ES6 import
 import bodyParser from 'body-parser'; // ES6 import
-import bot from '../../Initialization/bot.js'; // Import the bot instance
+// import { bot} from '../../Initialization/app.js'; // Import the bot instance
 
 const router = express.Router();
 
@@ -148,7 +148,6 @@ router.use((req, res) => {
 
 export default router;
 
-
 // ==========================================================================
 // Contact: 
 // If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
@@ -156,3 +155,73 @@ export default router;
 // Contributions are highly encouraged to help improve and expand this project. Let's 
 // Make it better together. Happy coding! 💡
 // ==========================================================================
+
+
+/*
+
+// src/webhook/webhook.js (partial example)
+import User from '../models/User.js'; // Adjust path
+
+const REFERRAL_PERCENTAGE = 20; // Move to config if shared
+const MIN_DEPOSIT = 500;
+
+export default async (req, res) => {
+  const { bot } = req; // Assuming bot is passed via middleware in app.js
+  const { event, data } = req.body;
+
+  if (event === 'charge.completed' && data.status === 'successful') {
+    const userId = data.meta?.userId;
+    const currency = data.currency;
+    const vatFee = parseFloat(data.meta?.vatFee || 0);
+    const totalAmount = data.amount;
+    const depositAmount = totalAmount - vatFee;
+
+    try {
+      const user = await User.findOne({ telegramId: userId });
+      if (!user) {
+        console.error(`User with ID ${userId} not found`);
+        return res.status(404).send('User not found');
+      }
+
+      user.balance += depositAmount;
+      user.totalDeposits += depositAmount;
+      if (!user.firstDeposit) user.firstDeposit = new Date();
+      await user.save();
+
+      // Handle referral reward
+      if (user.referredBy && !user.firstDeposit && depositAmount >= MIN_DEPOSIT) {
+        const referrer = await User.findOne({ referralCode: user.referredBy });
+        if (referrer) {
+          const reward = (depositAmount * REFERRAL_PERCENTAGE) / 100;
+          referrer.referralEarnings += reward;
+          referrer.balance += reward;
+          await referrer.save();
+
+          await bot.telegram.sendMessage(
+            referrer.telegramId,
+            `💰 **Referral Bonus!**\n\n` +
+              `🎉 You earned ${reward.toFixed(2)} ${currency} from a referral’s deposit of ${depositAmount} ${currency}!`,
+            { parse_mode: 'Markdown' }
+          );
+        }
+      }
+
+      await bot.telegram.sendMessage(
+        userId,
+        `✅ **Deposit Successful!**\n\n` +
+          `💳 **Amount:** ${depositAmount.toFixed(2)} ${currency}\n` +
+          `💰 **New Balance:** ${user.balance.toFixed(2)} ${currency}`,
+        { parse_mode: 'Markdown' }
+      );
+
+      return res.status(200).send('Webhook processed successfully');
+    } catch (error) {
+      console.error('Error processing webhook:', error.message);
+      return res.status(500).send('Internal server error');
+    }
+  }
+
+  return res.status(200).send('Event ignored');
+};
+
+*/

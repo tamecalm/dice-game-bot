@@ -1,21 +1,4 @@
-// ==========================================================================
-// Dice Game Bot Project - Script Header
-// ==========================================================================
-//
-// Project: Dice Game Bot
-// Repository: https://github.com/tamecalm/dice-game-bot
-// 
-// Description: 
-// A robust and extensible module designed for a multiplayer dice game bot. 
-// Feel free to use, modify, or contribute to the project under the terms of the repository's license.
-//
-// Author: Engr John! 🧑‍💻
-// Year: 2024
-// 
-// License: Licensed under the terms of the repository's license. Unauthorized duplication, 
-// Modification, or distribution of this script outside the license terms is prohibited.
-// ==========================================================================
-
+// src/bot/coins/withdrawal.js
 import { Markup } from 'telegraf'; // ES6 import
 import User from '../../models/User.js'; // Adjusted to ES6 import
 import Flutterwave from 'flutterwave-node-v3'; // ES6 import
@@ -30,7 +13,7 @@ const flw = new Flutterwave(
   process.env.FLW_SECRET_KEY || settings.flutterwaveSecretKey
 );
 
-export default (bot) => {
+export function setupWithdrawal(bot) {
   // Handle withdrawal initiation
   bot.action('withdrawal', async (ctx) => {
     try {
@@ -151,12 +134,4 @@ export default (bot) => {
       return ctx.reply('⚠️ Something went wrong. Please try again later.');
     }
   });
-};
-
-// ==========================================================================
-// Contact: 
-// If you have questions, suggestions, or ideas for improvement, please reach out through the project's repository.
-//
-// Contributions are highly encouraged to help improve and expand this project. Let's 
-// Make it better together. Happy coding! 💡
-// ==========================================================================
+}
