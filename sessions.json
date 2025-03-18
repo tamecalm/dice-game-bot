@@ -1,0 +1,19 @@
+{
+  "sessions": [
+    {
+      "id": "494218147:494218147",
+      "data": {
+        "difficulty": "hard",
+        "powerUp": "none"
+      }
+    },
+    {
+      "id": "5795715975:5795715975",
+      "data": {
+        "difficulty": "hard",
+        "powerUp": "shield",
+        "opponentPowerUp": "none"
+      }
+    }
+  ]
+}

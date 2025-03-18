@@ -1,5 +1,5 @@
 import { Telegraf } from "telegraf";
-import { session } from "telegraf/session"; // Correct import
+import LocalSession from 'telegraf-session-local';
 import dotenv from 'dotenv';
 import chalk from 'chalk';
 import gradient from 'gradient-string';
@@ -51,7 +51,9 @@ app.get('/status', (_req, res) => res.send('✅ Dice Game Bot is running...'));
     await connectDb();
     console.log(chalk.green('✅ Database connected'));
 
-    bot.use(session());
+    // Add session middleware
+    bot.use(new LocalSession({ database: 'sessions.json' }).middleware());
+
 
    // Step 2: Setup Command Handlers
 console.log(gradient.pastel('🚀 Setting up command handlers...'));
