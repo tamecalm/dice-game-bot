@@ -1,6 +1,8 @@
 // Holds players waiting for a match
 const waitingPlayers = new Map(); // Using Map for O(1) lookup by telegramId
-const TIMEOUT_MS = 30000; // 30 seconds timeout
+const TIMEOUT_MS = 30000; // 30 seconds default timeout
+const BOOSTED_TIMEOUT_MS = 15000; // 15 seconds when queue is busy
+const PRIORITY_FEE = 5; // $5 for priority queue jump
 
 // Utility to log matchmaking events
 const logMatchmaking = (message, ...args) => {
@@ -11,19 +13,37 @@ const logMatchmaking = (message, ...args) => {
 export default (bot) => {
   return {
     // Join the matchmaking queue
-    joinQueue: (player) => {
+    joinQueue: async (player) => {
       // Validate player object
       if (!player || !player.telegramId || !player.username || typeof player.betAmount !== 'number') {
         logMatchmaking('Invalid player object provided to joinQueue', player);
         return { success: false, match: null, message: 'Invalid player data' };
       }
 
-      const { telegramId, username, betAmount, powerUp = 'none' } = player;
+      const { telegramId, username, betAmount, powerUp = 'none', priority = false, currency = 'USD' } = player;
 
       // Check for duplicate entries
       if (waitingPlayers.has(telegramId)) {
         logMatchmaking(`Player ${username} (ID: ${telegramId}) is already in the queue`);
         return { success: false, match: null, message: 'Already in queue' };
+      }
+
+      // Handle priority fee
+      if (priority) {
+        const User = (await import('../../models/User.js')).default; // Dynamic import for User model
+        const user = await User.findOne({ telegramId });
+        if (!user || user.balance < PRIORITY_FEE) {
+          logMatchmaking(`Player ${username} (ID: ${telegramId}) lacks funds for priority`);
+          return { success: false, match: null, message: `Need ${PRIORITY_FEE} ${currency} for priority queue!` };
+        }
+        user.balance -= PRIORITY_FEE;
+        const admin = await User.findOne({ telegramId: (await import('../../config/settings.js')).default.adminIds[0] });
+        if (admin) {
+          admin.balance += PRIORITY_FEE;
+          await admin.save();
+        }
+        await user.save();
+        logMatchmaking(`Player ${username} (ID: ${telegramId}) paid ${PRIORITY_FEE} ${currency} for priority`);
       }
 
       // Add player to queue with timestamp and timeout
@@ -32,14 +52,16 @@ export default (bot) => {
         username,
         betAmount,
         powerUp,
+        currency,
         joinedAt: Date.now(),
         timeoutId: null,
+        priority,
       };
 
-      // Find a compatible match (same betAmount)
+      // Find a compatible match (within ±10% bet range)
       let matchedPlayer = null;
       for (const [id, p] of waitingPlayers) {
-        if (id !== telegramId && p.betAmount === betAmount) {
+        if (id !== telegramId && Math.abs(p.betAmount - betAmount) <= betAmount * 0.1) {
           matchedPlayer = p;
           waitingPlayers.delete(id);
           clearTimeout(p.timeoutId); // Clear opponent’s timeout
@@ -48,9 +70,12 @@ export default (bot) => {
       }
 
       if (matchedPlayer) {
-        // Match found
+        // Match found, use lower bet amount for pot
+        const potBet = Math.min(betAmount, matchedPlayer.betAmount);
+        matchedPlayer.betAmount = potBet; // Adjust for consistency in game logic
+        playerData.betAmount = potBet;
         const matchedPlayers = [matchedPlayer, playerData];
-        logMatchmaking(`Matched players: ${matchedPlayers.map(p => p.username).join(' vs ')} (Bet: ${betAmount})`);
+        logMatchmaking(`Matched players: ${matchedPlayers.map(p => p.username).join(' vs ')} (Pot Bet: ${potBet})`);
 
         // Notify matched players
         matchedPlayers.forEach((p) => {
@@ -58,7 +83,7 @@ export default (bot) => {
           bot.telegram.sendMessage(
             p.telegramId,
             `🎮 **Match Found!**\n\nYou’re playing against **${opponent.username}**.\n` +
-            `💵 Bet: ${betAmount} ${p.currency || 'currency'}\n` +
+            `💵 Pot Bet: ${potBet} ${p.currency}\n` +
             (p.powerUp !== 'none' ? `⚡ Your Power-Up: ${p.powerUp}\n` : '') +
             (opponent.powerUp !== 'none' ? `⚡ Opponent Power-Up: ${opponent.powerUp}\n` : '') +
             `Get ready to roll!`,
@@ -69,30 +94,36 @@ export default (bot) => {
         return { success: true, match: matchedPlayers, message: 'Match found' };
       }
 
-      // No match found, add to queue
+      // No match found, add to queue with dynamic timeout
+      const queueSizeAtBetLevel = Array.from(waitingPlayers.values())
+        .filter(p => Math.abs(p.betAmount - betAmount) <= betAmount * 0.1).length;
+      const timeoutDuration = queueSizeAtBetLevel > 5 ? BOOSTED_TIMEOUT_MS : TIMEOUT_MS;
+
       playerData.timeoutId = setTimeout(() => {
         if (waitingPlayers.has(telegramId)) {
           waitingPlayers.delete(telegramId);
-          logMatchmaking(`Player ${username} (ID: ${telegramId}) timed out after ${TIMEOUT_MS / 1000}s`);
+          logMatchmaking(`Player ${username} (ID: ${telegramId}) timed out after ${timeoutDuration / 1000}s`);
           bot.telegram.sendMessage(
             telegramId,
-            `⏳ **Matchmaking Timeout**\n\nNo opponent found for your ${betAmount} bet within ${TIMEOUT_MS / 1000} seconds. Try again!`,
+            `⏳ **Matchmaking Timeout**\n\nNo opponent found for your ${betAmount} ${currency} bet within ${timeoutDuration / 1000} seconds. Try a different amount!`,
             { parse_mode: 'Markdown' }
           ).catch((err) => logMatchmaking(`Failed to notify ${username}:`, err.message));
         }
-      }, TIMEOUT_MS);
+      }, timeoutDuration);
 
+      // Add player with priority consideration (lower index = earlier matching)
       waitingPlayers.set(telegramId, playerData);
-      logMatchmaking(`Player ${username} (ID: ${telegramId}) joined the queue. Bet: ${betAmount}, Power-Up: ${powerUp}`);
+      logMatchmaking(`Player ${username} (ID: ${telegramId}) joined the queue. Bet: ${betAmount}, Power-Up: ${powerUp}, Priority: ${priority}`);
 
       // Notify player they’re in the queue
-      bot.telegram.sendMessage(
-        telegramId,
-        `⏳ **Joined Queue**\n\nLooking for an opponent with a ${betAmount} bet...\n` +
+      let queueMessage = `⏳ **Joined Queue**\n\nLooking for an opponent near ${betAmount} ${currency}...\n` +
         (powerUp !== 'none' ? `⚡ Power-Up Selected: ${powerUp}\n` : '') +
-        `You’ll be matched soon or timed out in ${TIMEOUT_MS / 1000}s.`,
-        { parse_mode: 'Markdown' }
-      ).catch((err) => logMatchmaking(`Failed to notify ${username}:`, err.message));
+        `Timeout in ${timeoutDuration / 1000}s.`;
+      if (queueSizeAtBetLevel > 5) {
+        queueMessage += `\n⚡ **Queue Busy!** Adjust your bet if no match soon!`;
+      }
+      bot.telegram.sendMessage(telegramId, queueMessage, { parse_mode: 'Markdown' })
+        .catch((err) => logMatchmaking(`Failed to notify ${username}:`, err.message));
 
       return { success: true, match: null, message: 'Added to queue' };
     },
@@ -109,7 +140,6 @@ export default (bot) => {
       waitingPlayers.delete(telegramId);
       logMatchmaking(`Player ${player.username} (ID: ${telegramId}) left the queue`);
 
-      // Notify the player
       bot.telegram.sendMessage(
         telegramId,
         `👋 **Left Queue**\n\nYou’ve been removed from matchmaking.`,

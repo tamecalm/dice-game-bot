@@ -41,6 +41,8 @@ const userSchema = new mongoose.Schema(
     ties: { type: Number, default: 0 }, // Total ties
     winStreak: { type: Number, default: 0 }, // Current win streak
     lossStreak: { type: Number, default: 0 }, // Current loss streak
+    rivalryScore: { type: Map, of: Number, default: {} },
+    highRollerCount: { type: Number, default: 0 },
   },
   { collection: 'Dice' } // Explicitly set collection name to "Dice"
 );
