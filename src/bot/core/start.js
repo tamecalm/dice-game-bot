@@ -34,7 +34,7 @@ async function start(ctx) {
         telegramId,
         username,
         balance: 0,
-        currency: 'NGN',
+        currency: '$',
         totalDeposits: 0,
         gamesPlayed: 0,
         country: null,

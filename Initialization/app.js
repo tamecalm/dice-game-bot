@@ -17,6 +17,8 @@ import { setupWithdrawal } from '../src/bot/coins/withdrawal.js';
 import { setupReferral } from '../src/bot/coins/referral.js';
 import { pvcHandlers } from '../src/bot/gameModes/playPvC.js';
 import { pvpHandlers } from '../src/bot/gameModes/playPvP.js';
+import  profitabilityDashboard  from '../src/bot/owner/profitabilityDashboard.js';
+import  userStats  from '../src/bot/play/gameStats.js';
 
 // Load environment variables
 dotenv.config();
@@ -57,7 +59,8 @@ app.get('/status', (_req, res) => res.send('✅ Dice Game Bot is running...'));
 
    // Step 2: Setup Command Handlers
 console.log(gradient.pastel('🚀 Setting up command handlers...'));
-
+  profitabilityDashboard(bot);
+  userStats(bot);
 const handlers = [
   setupStart,
   setupPlay,
