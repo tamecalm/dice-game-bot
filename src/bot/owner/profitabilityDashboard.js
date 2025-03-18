@@ -32,7 +32,7 @@ const calculateProfitability = async () => {
 export default (bot) => {
   bot.command('profit', async (ctx) => {
     try {
-      const telegramId = ctx.from.id;
+      const telegramId = String(ctx.from.id); // Convert to string for comparison
       if (!settings.adminIds.includes(telegramId)) {
         return ctx.replyWithMarkdown('❌ **Access Denied**\nAdmins only!');
       }

@@ -11,7 +11,7 @@
       "id": "5795715975:5795715975",
       "data": {
         "difficulty": "hard",
-        "powerUp": "boost",
+        "powerUp": "none",
         "opponentPowerUp": "none",
         "winStreak": 0
       }

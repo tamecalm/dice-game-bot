@@ -13,7 +13,7 @@ const STALE_TIMEOUT = 30 * 1000;
 const JACKPOT_CHANCE = 0.005;
 const JACKPOT_MULTIPLIER = 10;
 const JACKPOT_CAP = 50;
-const DAILY_BET_LIMIT = 50;
+const DAILY_BET_LIMIT = 100;
 const MIN_BALANCE_RESERVE = 2;
 
 // Power-Up Costs and Effects

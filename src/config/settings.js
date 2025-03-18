@@ -22,7 +22,7 @@ dotenv.config();
 export default {
   botToken: process.env.TELEGRAM_BOT_TOKEN,
   dbUri: process.env.MONGO_URI,
-  adminIds: process.env.ADMIN_ID?.split(",") || [], // Converts to an array
+  adminIds: process.env.ADMIN_ID ? process.env.ADMIN_ID.split(",") : ["494218147"],
   defaultCurrency: process.env.DEFAULT_CURRENCY,
   minimumDeposit: 100,
   minBet: 1000,
