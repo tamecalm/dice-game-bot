@@ -4,16 +4,18 @@
       "id": "494218147:494218147",
       "data": {
         "difficulty": "hard",
-        "powerUp": "none"
+        "powerUp": "none",
+        "taunt": "Prepare to lose!"
       }
     },
     {
       "id": "5795715975:5795715975",
       "data": {
-        "difficulty": "easy",
+        "difficulty": "hard",
         "powerUp": "none",
         "opponentPowerUp": "none",
-        "winStreak": 0
+        "winStreak": 0,
+        "taunt": "Too easy!"
       }
     }
   ]

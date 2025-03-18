@@ -26,30 +26,29 @@ const userSchema = new mongoose.Schema(
     currency: { type: String, default: '$' },
     totalDeposits: { type: Number, default: 0 },
     gamesPlayed: { type: Number, default: 0 },
-    country: { type: String }, // User's country
+    country: { type: String },
     referralCode: { type: String },
-    referredBy: { type: String }, // User ID of the referrer, if applicable
-    state: { type: String }, // Track current user state (e.g., 'withdrawing', 'depositing')
-    tempAmount: { type: Number }, // Temporary amount for withdrawals
-    usdtAddress: { type: String }, // User's USDT address
-    referralEarnings: { type: Number, default: 0 }, // Total referral earnings
-    lastLogin: { type: Date }, // Last login timestamp
-    firstDeposit: { type: Date }, // First deposit timestamp (used for referral rewards)
-    // New fields for win/loss tracking and streaks
-    wins: { type: Number, default: 0 }, // Total wins
-    losses: { type: Number, default: 0 }, // Total losses
-    ties: { type: Number, default: 0 }, // Total ties
-    winStreak: { type: Number, default: 0 }, // Current win streak
-    lossStreak: { type: Number, default: 0 }, // Current loss streak
-    rivalryScore: { type: Map, of: Number, default: {} },
+    referredBy: { type: String },
+    state: { type: String },
+    tempAmount: { type: Number },
+    usdtAddress: { type: String },
+    referralEarnings: { type: Number, default: 0 },
+    lastLogin: { type: Date },
+    firstDeposit: { type: Date },
+    wins: { type: Number, default: 0 },
+    losses: { type: Number, default: 0 },
+    ties: { type: Number, default: 0 },
+    winStreak: { type: Number, default: 0 },
+    lossStreak: { type: Number, default: 0 },
+    rivalryScore: { type: Map, of: Number, default: () => ({}) },
     highRollerCount: { type: Number, default: 0 },
+    weeklyWins: { type: Number, default: 0 },
+    dailyWins: { type: Number, default: 0 }, // New field for daily leaderboard
   },
-  { collection: 'Dice' } // Explicitly set collection name to "Dice"
+  { collection: 'Dice' }
 );
 
-const User = mongoose.model('User', userSchema);
-
-export default User;
+export default mongoose.model('User', userSchema);
 
 // ==========================================================================
 // Contact: 
