@@ -6,33 +6,50 @@ import { v4 as uuidv4 } from 'uuid';
 // Constants
 const MIN_BET = 1; // $1
 const MAX_BET = 10; // $10
-const BASE_COOLDOWN = 30 * 1000;
-const LUCKY_ROLL_MULTIPLIER = 1.5;
+const BASE_COOLDOWN = 60 * 1000; // 60s
+const LUCKY_ROLL_MULTIPLIER = 1.25;
 const BOT_LUCKY_PENALTY = 0.6;
-const STALE_TIMEOUT = 30 * 1000;
-const JACKPOT_CHANCE = 0.005;
-const JACKPOT_MULTIPLIER = 10;
-const JACKPOT_CAP = 50;
+const STALE_TIMEOUT = 15 * 1000; // Reduced to 15s for decay
 const DAILY_BET_LIMIT = 100;
-const MIN_BALANCE_RESERVE = 2;
+const DAILY_WIN_CAP = 50;
+const MIN_BALANCE_RESERVE = 5;
+const DECAY_RATE = 0.20; // 20% decay
+const BOT_PERSONALITY_SWITCH_FEE = 1; // $1
+const REVERSE_JACKPOT_AMOUNT = 10; // $10
+const REVERSE_JACKPOT_CONTRIBUTION = 0.10; // $0.10 per loss
 
-// Power-Up Costs and Effects
+// Power-Up Costs and Effects (Only Boost)
 const POWERUP_COSTS = {
-  reroll: 0.20, // 20%
-  shield: 0.25, // 25%
   boost: 0.30, // 30%
 };
 const POWERUP_EFFECTS = {
   boostMultiplier: 1.25,
-  shieldReduction: 0.5,
+};
+
+// Risk Ladder Tiers
+const RISK_LADDER_TIERS = {
+  bronze: { minBet: 1, maxBet: 3, multiplier: 1.2 },
+  silver: { minBet: 4, maxBet: 7, multiplier: 1.3, requiredWins: 1 },
+  gold: { minBet: 8, maxBet: 10, multiplier: 1.5, requiredWins: 2 },
+};
+
+// Bot Personalities (Weekly rotation)
+const BOT_PERSONALITIES = {
+  greedy: { commissionBonus: 0.25 }, // 25% commission
+  tricky: { rerollOnTie: true }, // Reroll if tied
+  lucky: { rollBonusChance: 0.20 }, // 20% chance +1
 };
 
 // State tracking
 const lastGameTime = new Map();
 const activeGames = new Set();
 const dailyBets = new Map();
+const dailyWins = new Map();
 const powerUpUsage = new Map();
-const lossRecoveryPool = { amount: 0 };
+const riskLadderProgress = new Map(); // UserID -> { tier, wins }
+let currentBotPersonality = 'greedy'; // Default, changes weekly
+let reverseJackpotPool = 0; // Global pool
+let lastBotRoll = null; // Track for Reverse Jackpot
 let betPromptMessageId = null;
 const timeouts = new Map();
 
@@ -41,6 +58,15 @@ const logError = (location, error, ctx) => {
   console.error(`Error at ${location}:`, error.message);
   if (ctx) ctx.reply(`⚠️ **Error**: ${error.message}`);
 };
+
+// Rotate bot personality weekly
+const rotateBotPersonality = () => {
+  const personalities = Object.keys(BOT_PERSONALITIES);
+  const weekNumber = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+  currentBotPersonality = personalities[weekNumber % personalities.length];
+};
+setInterval(rotateBotPersonality, 7 * 24 * 60 * 60 * 1000); // Weekly
+rotateBotPersonality(); // Initial set
 
 // Roll dice with countdown animation
 const rollDice = async (ctx, isBot = false) => {
@@ -52,6 +78,7 @@ const rollDice = async (ctx, isBot = false) => {
     await ctx.editMessageText(isBot ? '🤖 **Bot Rolling** 🎲\n1...' : '🎲 **Your Roll**\n1...', { message_id: rollingMsg.message_id });
     await new Promise((resolve) => setTimeout(resolve, 500));
     const diceValue = isBot ? getBotRoll(ctx.session?.difficulty || 'normal', ctx.session?.winStreak || 0) : (await ctx.replyWithDice()).dice.value;
+    if (isBot) lastBotRoll = diceValue; // Track for Reverse Jackpot
     await ctx.deleteMessage(rollingMsg.message_id).catch(() => {});
     return diceValue;
   } catch (error) {
@@ -60,25 +87,28 @@ const rollDice = async (ctx, isBot = false) => {
   }
 };
 
-// Bot roll with dynamic difficulty and streak breaker
+// Bot roll with adjusted difficulty and personality
 const getBotRoll = (difficulty, winStreak) => {
   let roll = Math.floor(Math.random() * 6) + 1;
-  if (winStreak >= 3) roll = Math.min(6, roll + 1); // Streak breaker
+  if (winStreak >= 3) roll = Math.min(6, roll + 1);
   switch (difficulty) {
-    case 'easy': return Math.min(4, roll); // 1-4
-    case 'hard': return [1, 2, 3, 4, 5, 6, 6][Math.floor(Math.random() * 7)]; // Bias toward 6
-    default: return roll; // Normal
+    case 'easy': roll = Math.min(5, roll); break;
+    case 'normal': if (roll < 4 && Math.random() < 0.1) roll = Math.floor(Math.random() * 6) + 1; break;
+    case 'hard': roll = Math.random() < 0.4 ? 6 : roll; break;
   }
+  if (currentBotPersonality === 'lucky' && Math.random() < BOT_PERSONALITIES.lucky.rollBonusChance) roll = Math.min(6, roll + 1);
+  return roll;
 };
 
 // Calculate commission
 const getCommissionRate = (betAmount) => {
-  return betAmount <= 5 ? 0.05 : 0.10; // 5% for $1-$5, 10% for $6-$10
+  const baseRate = betAmount <= 3 ? 0.10 : betAmount <= 7 ? 0.15 : 0.20;
+  return currentBotPersonality === 'greedy' ? baseRate + BOT_PERSONALITIES.greedy.commissionBonus : baseRate;
 };
 
 // Calculate cooldown
 const getCooldownTime = (betAmount) => {
-  const scaleFactor = Math.min((betAmount - 1) / 9, 3); // 30s to 120s
+  const scaleFactor = Math.min((betAmount - 1) / 9, 2); // 60s to 180s
   return BASE_COOLDOWN * (1 + scaleFactor);
 };
 
@@ -92,7 +122,21 @@ const checkDailyBetLimit = (userId, betAmount) => {
   return true;
 };
 
-// Prompt for Power-Up selection
+// Check daily win cap
+const checkDailyWinCap = (userId, winAmount) => {
+  const today = new Date().toDateString();
+  const key = `${userId}-${today}`;
+  const current = dailyWins.get(key) || 0;
+  if (current + winAmount > DAILY_WIN_CAP) {
+    const allowedWin = Math.max(0, DAILY_WIN_CAP - current);
+    dailyWins.set(key, DAILY_WIN_CAP);
+    return allowedWin;
+  }
+  dailyWins.set(key, current + winAmount);
+  return winAmount;
+};
+
+// Prompt for Power-Up selection (Boost only)
 const promptPowerUp = async (ctx, user, betAmount) => {
   try {
     const powerUpCount = powerUpUsage.get(user.telegramId) || 0;
@@ -101,18 +145,12 @@ const promptPowerUp = async (ctx, user, betAmount) => {
       return confirmGame(ctx, user, betAmount);
     }
     const msg = await ctx.replyWithMarkdown(
-      `⚡ **Pick a Power-Up** (Optional)\n` +
-      `1. 🔄 **Re-Roll**: $${Math.floor(betAmount * POWERUP_COSTS.reroll)} - Roll again\n` +
-      `2. 🛡️ **Shield**: $${Math.floor(betAmount * POWERUP_COSTS.shield)} - Halve bot wins\n` +
-      `3. 🚀 **Boost**: $${Math.floor(betAmount * POWERUP_COSTS.boost)} - 25% extra winnings\n` +
-      `4. ➡️ **Skip**: No power-up`,
+      `⚡ **Power-Up Option**\n` +
+      `🚀 **Boost**: $${Math.floor(betAmount * POWERUP_COSTS.boost)} - 25% extra winnings\n` +
+      `➡️ **Skip**: No power-up`,
       {
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: '🔄 Re-Roll', callback_data: `powerup_reroll_${betAmount}` },
-              { text: '🛡️ Shield', callback_data: `powerup_shield_${betAmount}` },
-            ],
             [
               { text: '🚀 Boost', callback_data: `powerup_boost_${betAmount}` },
               { text: '➡️ Skip', callback_data: `confirm_pvc_${betAmount}` },
@@ -124,10 +162,7 @@ const promptPowerUp = async (ctx, user, betAmount) => {
 
     const timeoutId = setTimeout(async () => {
       try {
-        await ctx.deleteMessage(msg.message_id);
-        await ctx.replyWithMarkdown('⏰ **Timed Out**: Power-up selection cancelled.');
-        activeGames.delete(user.telegramId);
-        timeouts.delete(user.telegramId);
+        await decayBet(ctx, user, betAmount);
       } catch (e) {}
     }, STALE_TIMEOUT);
     timeouts.set(user.telegramId, timeoutId);
@@ -135,6 +170,37 @@ const promptPowerUp = async (ctx, user, betAmount) => {
     return msg.message_id;
   } catch (error) {
     logError('promptPowerUp', error, ctx);
+  }
+};
+
+// Decay bet if timeout occurs
+const decayBet = async (ctx, user, betAmount) => {
+  try {
+    const powerUp = ctx.session?.powerUp || 'none';
+    const powerUpCost = powerUp !== 'none' ? Math.floor(betAmount * POWERUP_COSTS[powerUp]) : 0;
+    const totalCost = betAmount + powerUpCost;
+    const decayAmount = Math.floor(totalCost * DECAY_RATE);
+    const decayedBet = totalCost - decayAmount;
+
+    if (user.balance < totalCost + MIN_BALANCE_RESERVE) {
+      await ctx.replyWithMarkdown(`❌ **Low Balance**\nNeed $${(totalCost + MIN_BALANCE_RESERVE).toFixed(2)}!`);
+      activeGames.delete(user.telegramId);
+      timeouts.delete(user.telegramId);
+      return;
+    }
+
+    user.balance -= decayAmount;
+    await user.save();
+    const admin = await User.findOne({ telegramId: settings.adminIds[0] });
+    admin.balance += decayAmount;
+    await admin.save();
+
+    await ctx.replyWithMarkdown(`⏰ **Bet Decayed**\n20% ($${decayAmount}) taken. Playing with $${decayedBet}.`);
+    await startPvCGame(ctx, user, decayedBet / (1 + (powerUp !== 'none' ? POWERUP_COSTS[powerUp] : 0))); // Adjust bet
+  } catch (error) {
+    logError('decayBet', error, ctx);
+    activeGames.delete(user.telegramId);
+    timeouts.delete(user.telegramId);
   }
 };
 
@@ -146,7 +212,15 @@ const confirmGame = async (ctx, user, betAmount) => {
     const totalCost = betAmount + powerUpCost;
 
     if (user.balance < totalCost + MIN_BALANCE_RESERVE) {
-      await ctx.replyWithMarkdown(`❌ **Low Balance**\nYou need $${(totalCost + MIN_BALANCE_RESERVE).toFixed(2)} (incl. $2 reserve)!`);
+      await ctx.replyWithMarkdown(`❌ **Low Balance**\nNeed $${(totalCost + MIN_BALANCE_RESERVE).toFixed(2)} (incl. $5 reserve)!`);
+      activeGames.delete(user.telegramId);
+      return;
+    }
+
+    const ladderTier = riskLadderProgress.get(user.telegramId)?.tier || 'bronze';
+    const tierInfo = RISK_LADDER_TIERS[ladderTier];
+    if (betAmount < tierInfo.minBet || betAmount > tierInfo.maxBet) {
+      await ctx.replyWithMarkdown(`❌ **Invalid Bet**\n${ladderTier} tier requires $${tierInfo.minBet}-$${tierInfo.maxBet}!`);
       activeGames.delete(user.telegramId);
       return;
     }
@@ -154,11 +228,12 @@ const confirmGame = async (ctx, user, betAmount) => {
     const msg = await ctx.replyWithMarkdown(
       `🎲 **Confirm Bet**\n` +
       `💰 **Bet**: $${betAmount}\n` +
-      (powerUp !== 'none' ? `⚡ **Power-Up**: ${powerUp} ($${powerUpCost})\n` : '') +
+      (powerUp !== 'none' ? `⚡ **Boost**: +$${powerUpCost}\n` : '') +
       `📊 **Total**: $${totalCost}\n` +
       `💼 **Balance**: $${user.balance.toFixed(2)}\n` +
-      `🎯 **Mode**: ${ctx.session?.difficulty || 'normal'}\n\n` +
-      `Confirm in 3s or cancel:`,
+      `🎯 **Mode**: ${ctx.session?.difficulty || 'normal'}\n` +
+      `🏆 **Tier**: ${ladderTier}\n\n` +
+      `Confirm in 15s or decay:`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -173,10 +248,7 @@ const confirmGame = async (ctx, user, betAmount) => {
 
     const timeoutId = setTimeout(async () => {
       try {
-        await ctx.deleteMessage(msg.message_id);
-        await ctx.replyWithMarkdown('⏰ **Timed Out**: Game cancelled.');
-        activeGames.delete(user.telegramId);
-        timeouts.delete(user.telegramId);
+        await decayBet(ctx, user, betAmount);
       } catch (e) {}
     }, STALE_TIMEOUT);
     timeouts.set(user.telegramId, timeoutId);
@@ -195,26 +267,26 @@ const startPvCGame = async (ctx, user, betAmount) => {
     const cooldown = getCooldownTime(betAmount);
 
     if (activeGames.has(user.telegramId)) {
-      await ctx.replyWithMarkdown('⏳ **Busy**\nFinish your current game first!');
+      await ctx.replyWithMarkdown('⏳ **Busy**\nFinish your current game!');
       return;
     }
     activeGames.add(user.telegramId);
 
     if (!checkDailyBetLimit(user.telegramId, betAmount)) {
-      await ctx.replyWithMarkdown('❌ **Daily Limit**\nYou’ve hit $50 today. Back tomorrow!');
+      await ctx.replyWithMarkdown('❌ **Daily Limit**\n$100 cap reached. Try tomorrow!');
       activeGames.delete(user.telegramId);
       return;
     }
 
     if (currentTime - lastGame < cooldown) {
       const remaining = Math.ceil((cooldown - (currentTime - lastGame)) / 1000);
-      await ctx.replyWithMarkdown(`⏳ **Cooldown**\nWait ${remaining}s to play again!`);
+      await ctx.replyWithMarkdown(`⏳ **Cooldown**\nWait ${remaining}s!`);
       activeGames.delete(user.telegramId);
       return;
     }
     if (user.lossStreak >= 3 && currentTime - lastGame < 5 * 60 * 1000) {
       const remaining = Math.ceil((5 * 60 * 1000 - (currentTime - lastGame)) / 1000);
-      await ctx.replyWithMarkdown(`⏳ **Break Time**\nAfter 3 losses, wait ${remaining}s!`);
+      await ctx.replyWithMarkdown(`⏳ **Break**\nAfter 3 losses, wait ${remaining}s!`);
       activeGames.delete(user.telegramId);
       return;
     }
@@ -247,8 +319,9 @@ const startPvCGame = async (ctx, user, betAmount) => {
     }
 
     const gameId = uuidv4();
-    const gameMsg = await ctx.replyWithMarkdown(`🎮 **Game Started**\n👤 ${user.username} vs 🤖 Bot\nID: ${gameId.slice(0, 8)}` +
-      (powerUp !== 'none' ? `\n⚡ Using: ${powerUp}` : ''));
+    const ladderTier = riskLadderProgress.get(user.telegramId)?.tier || 'bronze';
+    const gameMsg = await ctx.replyWithMarkdown(`🎮 **Game On**\n👤 ${user.username} vs 🤖 Bot (${currentBotPersonality})\nID: ${gameId.slice(0, 8)}\n` +
+      `🏆 **Tier**: ${ladderTier}` + (powerUp !== 'none' ? `\n⚡ Boost Active` : ''));
 
     let playerRoll = await rollDice(ctx, false);
     if (playerRoll === null) {
@@ -256,83 +329,74 @@ const startPvCGame = async (ctx, user, betAmount) => {
       return;
     }
 
-    if (powerUp === 'reroll') {
-      const rerollMsg = await ctx.replyWithMarkdown(`🔄 **Re-Roll Option**\nRoll: ${playerRoll}\nKeep or try again?`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '✅ Keep', callback_data: 'keep_roll' },
-              { text: '🔄 Re-Roll', callback_data: 'reroll' },
-            ],
-          ],
-        },
-      });
-      const rerollResponse = await new Promise((resolve) => {
-        bot.once('callback_query', (query) => {
-          if (query.from.id === user.telegramId) resolve(query.data);
-        });
-        setTimeout(() => resolve('keep_roll'), STALE_TIMEOUT);
-      });
-      await ctx.deleteMessage(rerollMsg.message_id).catch(() => {});
-      if (rerollResponse === 'reroll') {
-        playerRoll = await rollDice(ctx, false);
-        if (playerRoll === null) {
-          activeGames.delete(user.telegramId);
-          return;
-        }
-      }
-    }
-
-    const botRoll = await rollDice(ctx, true);
+    let botRoll = await rollDice(ctx, true);
     if (botRoll === null) {
       activeGames.delete(user.telegramId);
       return;
+    }
+
+    if (currentBotPersonality === 'tricky' && playerRoll === botRoll) {
+      botRoll = await rollDice(ctx, true); // Reroll on tie
     }
 
     let resultMessage;
     let winAmount = 0;
     let commission = 0;
     const commissionRate = getCommissionRate(betAmount);
-    const difficultyMultiplier = { easy: 1.5, normal: 1.8, hard: 2 }[ctx.session?.difficulty || 'normal'];
-    const outcome = playerRoll > botRoll ? 'win' : botRoll > playerRoll ? 'loss' : 'tie';
+    const tierMultiplier = RISK_LADDER_TIERS[ladderTier].multiplier;
+    const outcome = playerRoll > botRoll ? 'win' : 'loss'; // Ties are losses
+    const ladderProgress = riskLadderProgress.get(user.telegramId) || { tier: 'bronze', wins: 0 };
 
     if (outcome === 'win') {
-      winAmount = playerRoll === 6 ? betAmount * LUCKY_ROLL_MULTIPLIER : betAmount * difficultyMultiplier;
+      winAmount = playerRoll === 6 ? betAmount * LUCKY_ROLL_MULTIPLIER : betAmount * tierMultiplier;
       if (powerUp === 'boost') winAmount *= POWERUP_EFFECTS.boostMultiplier;
+      winAmount = Math.min(winAmount, betAmount * 1.5); // Cap at 1.5x
       commission = Math.floor(winAmount * commissionRate);
-      user.balance += winAmount - commission;
-      admin.balance += commission;
+      const cappedWin = checkDailyWinCap(user.telegramId, winAmount - commission);
+      user.balance += cappedWin;
+      admin.balance += commission + (winAmount - commission - cappedWin);
       user.wins += 1;
       user.winStreak += 1;
       user.lossStreak = 0;
       ctx.session.winStreak = user.winStreak;
+      ladderProgress.wins += 1;
+      if (ladderProgress.tier === 'bronze' && ladderProgress.wins >= RISK_LADDER_TIERS.silver.requiredWins) {
+        ladderProgress.tier = 'silver';
+        ladderProgress.wins = 0;
+      } else if (ladderProgress.tier === 'silver' && ladderProgress.wins >= RISK_LADDER_TIERS.gold.requiredWins) {
+        ladderProgress.tier = 'gold';
+        ladderProgress.wins = 0;
+      }
+      riskLadderProgress.set(user.telegramId, ladderProgress);
       resultMessage = playerRoll === 6
-        ? `🎉 **Lucky 6!**\n1.5x Bonus!\n`
+        ? `🎉 **Lucky 6!**\n1.25x Bonus!\n`
         : `🎉 **You Win!**\n`;
-    } else if (outcome === 'loss') {
+    } else {
       const botWin = botRoll === 6 ? Math.floor(betAmount * BOT_LUCKY_PENALTY) : betAmount;
-      const adjustedBotWin = powerUp === 'shield' ? Math.floor(botWin * POWERUP_EFFECTS.shieldReduction) : botWin;
-      admin.balance += adjustedBotWin;
-      lossRecoveryPool.amount += Math.floor(betAmount * 0.1);
+      admin.balance += botWin;
       user.losses += 1;
       user.lossStreak += 1;
       user.winStreak = 0;
       ctx.session.winStreak = 0;
+      ladderProgress.tier = 'bronze';
+      ladderProgress.wins = 0;
+      riskLadderProgress.set(user.telegramId, ladderProgress);
+      reverseJackpotPool += REVERSE_JACKPOT_CONTRIBUTION;
+      if (lastBotRoll === 6 && botRoll === 6 && reverseJackpotPool >= REVERSE_JACKPOT_AMOUNT) {
+        admin.balance += REVERSE_JACKPOT_AMOUNT;
+        reverseJackpotPool -= REVERSE_JACKPOT_AMOUNT;
+        await ctx.replyWithMarkdown(`🎰 **Reverse Jackpot!**\nBot rolled two 6s! House claims $10.`);
+      }
       resultMessage = botRoll === 6
-        ? `🤖 **Bot’s Lucky 6!**\nTakes ${powerUp === 'shield' ? '30%' : '60%'}!\n`
+        ? `🤖 **Bot’s Lucky 6!**\nTakes 60%!\n`
+        : playerRoll === botRoll
+        ? `🤝 **Tie = Loss!**\n`
         : `🤖 **Bot Wins!**\n`;
-    } else {
-      user.balance += betAmount; // Refund bet only
-      user.ties += 1;
-      user.winStreak = 0;
-      user.lossStreak = 0;
-      ctx.session.winStreak = 0;
-      resultMessage = `🤝 **Tie!**\n`;
     }
 
     user.gamesPlayed += 1;
     if (user.gamesPlayed % 5 === 0) {
-      await ctx.replyWithMarkdown(`⚠️ **Break Time?**\nYou’ve played ${user.gamesPlayed} games!`);
+      await ctx.replyWithMarkdown(`⚠️ **Break?**\n${user.gamesPlayed} games played!`);
     }
     if (powerUp !== 'none') powerUpUsage.set(user.telegramId, (powerUpUsage.get(user.telegramId) || 0) + 1);
 
@@ -350,36 +414,34 @@ const startPvCGame = async (ctx, user, betAmount) => {
       commission,
       difficulty: ctx.session?.difficulty || 'normal',
       powerUp: powerUp !== 'none' ? powerUp : undefined,
+      ladderTier,
     });
     await game.save();
 
     resultMessage += `🎲 **Rolls**: You ${playerRoll} | Bot ${botRoll}\n` +
       (outcome === 'win' ? `💰 **Won**: $${(winAmount - commission).toFixed(2)} (after $${commission} fee)\n` +
-        (playerRoll === 6 ? `🤖 "Lucky shot!"` : `🤖 "I’ll win next time!"`)
-      : outcome === 'loss' ? `💸 **Lost**: $${(botRoll === 6 ? Math.floor(betAmount * BOT_LUCKY_PENALTY) : betAmount).toFixed(2)}${powerUp === 'shield' ? ' (Shield helped!)' : ''}\n` +
-        `🤖 "Gotcha!"`
-      : `💵 **Refund**: $${betAmount.toFixed(2)}\n🤖 "Even match!"`) +
+        (playerRoll === 6 ? `🤖 "Nice roll!"` : `🤖 "Next time!"`)
+      : `💸 **Lost**: $${betAmount.toFixed(2)}\n🤖 "Got you!"`) +
       `\n💼 **Balance**: $${user.balance.toFixed(2)}` +
+      `\n🏆 **Tier**: ${ladderProgress.tier}` +
       (user.winStreak > 1 ? `\n🔥 **Streak**: ${user.winStreak} wins` : user.lossStreak > 1 ? `\n💀 **Streak**: ${user.lossStreak} losses` : '');
-
-    if (user.gamesPlayed % 10 === 0 && outcome !== 'win') {
-      user.balance += 0.50;
-      await user.save();
-      resultMessage += `\n🎁 **Bonus**: +$0.50 for 10 games!`;
-    }
 
     const resultMsg = await ctx.replyWithMarkdown(resultMessage, {
       reply_markup: {
-        inline_keyboard: outcome === 'win'
+        inline_keyboard: outcome === 'win' && !dailyWins.get(`${user.telegramId}-${new Date().toDateString()}`) >= DAILY_WIN_CAP
           ? [
               [
                 { text: '🎰 Double It', callback_data: `double_${winAmount - commission}_${gameId}` },
                 { text: '🎲 Again', callback_data: 'play_pvc' },
               ],
+              [
+                { text: '🤖 Switch Bot ($1)', callback_data: 'switch_personality' },
+              ],
             ]
           : [
               [
                 { text: '🎲 Again', callback_data: 'play_pvc' },
+                { text: '🤖 Switch Bot ($1)', callback_data: 'switch_personality' },
               ],
             ],
       },
@@ -393,7 +455,7 @@ const startPvCGame = async (ctx, user, betAmount) => {
   }
 };
 
-// Double or Nothing with Jackpot
+// Double or Nothing (Restricted)
 const doubleOrNothing = async (ctx, user, previousWin, gameId) => {
   try {
     activeGames.add(user.telegramId);
@@ -403,42 +465,40 @@ const doubleOrNothing = async (ctx, user, previousWin, gameId) => {
       activeGames.delete(user.telegramId); return;
     }
 
-    const botRoll = await rollDice(ctx, true);
+    let botRoll = await rollDice(ctx, true);
     if (botRoll === null) {
       activeGames.delete(user.telegramId); return;
+    }
+    if (currentBotPersonality === 'tricky' && playerRoll === botRoll) {
+      botRoll = await rollDice(ctx, true); // Reroll on tie
     }
 
     let resultMessage;
     let newWin = 0;
-    const isJackpot = playerRoll === 6 && Math.random() < JACKPOT_CHANCE && (await Game.findOne({ gameId })).playerRoll === 6;
+    const outcome = playerRoll > botRoll ? 'win' : 'loss';
 
-    if (isJackpot) {
-      newWin = Math.min(previousWin * JACKPOT_MULTIPLIER, JACKPOT_CAP);
+    if (outcome === 'win') {
+      newWin = previousWin * 1.5;
+      newWin = checkDailyWinCap(user.telegramId, newWin);
       user.balance += newWin;
-      resultMessage = `🎰 **JACKPOT!**\nTwo 6s!\n` +
-        `🎲 **Rolls**: You ${playerRoll} | Bot ${botRoll}\n` +
-        `💰 **Won**: $${newWin.toFixed(2)}\n` +
-        `🤖 "Insane luck!"`;
-    } else if (playerRoll > botRoll) {
-      newWin = previousWin * 2;
-      user.balance += previousWin;
+      user.wins += 1;
+      user.winStreak += 1;
+      user.lossStreak = 0;
       resultMessage = `🎉 **Doubled!**\n` +
         `🎲 **Rolls**: You ${playerRoll} | Bot ${botRoll}\n` +
         `💰 **Won**: $${newWin.toFixed(2)}\n` +
-        `🤖 "Well played!"`;
+        `🤖 "Well done!"`;
     } else {
       resultMessage = `💥 **Lost!**\n` +
         `🎲 **Rolls**: You ${playerRoll} | Bot ${botRoll}\n` +
         `💸 **Gone**: $${previousWin.toFixed(2)}\n` +
-        `🤖 "Tough break!"`;
+        `🤖 "Tough luck!"`;
+      user.losses += 1;
+      user.lossStreak += 1;
+      user.winStreak = 0;
     }
 
     user.gamesPlayed += 1;
-    if (newWin > 0) {
-      user.wins += 1; user.winStreak += 1; user.lossStreak = 0;
-    } else {
-      user.losses += 1; user.lossStreak += 1; user.winStreak = 0;
-    }
     await user.save();
 
     const doubleGame = new Game({
@@ -447,7 +507,7 @@ const doubleOrNothing = async (ctx, user, previousWin, gameId) => {
       betAmount: previousWin,
       playerRoll,
       botRoll,
-      outcome: newWin > 0 ? 'win' : 'loss',
+      outcome,
       winnings: newWin,
       difficulty: ctx.session?.difficulty || 'normal',
     });
@@ -461,6 +521,7 @@ const doubleOrNothing = async (ctx, user, previousWin, gameId) => {
         inline_keyboard: [
           [
             { text: '🎲 Again', callback_data: 'play_pvc' },
+            { text: '🤖 Switch Bot ($1)', callback_data: 'switch_personality' },
           ],
         ],
       },
@@ -470,6 +531,28 @@ const doubleOrNothing = async (ctx, user, previousWin, gameId) => {
   } catch (error) {
     logError('doubleOrNothing', error, ctx);
     activeGames.delete(user.telegramId);
+  }
+};
+
+// Switch bot personality
+const switchBotPersonality = async (ctx, user) => {
+  try {
+    if (user.balance < BOT_PERSONALITY_SWITCH_FEE + MIN_BALANCE_RESERVE) {
+      await ctx.replyWithMarkdown(`❌ **Low Balance**\nNeed $${(BOT_PERSONALITY_SWITCH_FEE + MIN_BALANCE_RESERVE).toFixed(2)} to switch!`);
+      return;
+    }
+
+    user.balance -= BOT_PERSONALITY_SWITCH_FEE;
+    const admin = await User.findOne({ telegramId: settings.adminIds[0] });
+    admin.balance += BOT_PERSONALITY_SWITCH_FEE;
+    await user.save();
+    await admin.save();
+
+    const personalities = Object.keys(BOT_PERSONALITIES).filter(p => p !== currentBotPersonality);
+    currentBotPersonality = personalities[Math.floor(Math.random() * personalities.length)];
+    await ctx.replyWithMarkdown(`🤖 **Bot Switched!**\nNow facing: ${currentBotPersonality}`);
+  } catch (error) {
+    logError('switchBotPersonality', error, ctx);
   }
 };
 
@@ -483,11 +566,13 @@ export default async (ctx) => {
       return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
     }
 
+    const ladderTier = riskLadderProgress.get(telegramId)?.tier || 'bronze';
     await ctx.replyWithMarkdown(
-      `🎲 **Dice Duel**\nPick your mode:\n` +
-      `😊 **Easy**: Bot rolls 1-4 (1.5x)\n` +
-      `😐 **Normal**: Fair rolls (1.8x)\n` +
-      `😈 **Hard**: Bot loves 6 (2x)`,
+      `🎲 **Dice Duel**\n🤖 Bot: ${currentBotPersonality}\n🏆 Tier: ${ladderTier}\n` +
+      `Pick your mode:\n` +
+      `😊 **Easy**: Bot 1-5 (1.2x)\n` +
+      `😐 **Normal**: Slight bias (1.3x)\n` +
+      `😈 **Hard**: 40% chance of 6 (1.5x)`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -515,11 +600,13 @@ export const pvcHandlers = (bot) => {
     ctx.session.difficulty = ctx.match[1];
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
+    const ladderTier = riskLadderProgress.get(ctx.from.id)?.tier || 'bronze';
+    const tierInfo = RISK_LADDER_TIERS[ladderTier];
     const promptMsg = await ctx.replyWithMarkdown(
-      `💰 **Place Your Bet**\n` +
+      `💰 **Place Bet**\n` +
       `Mode: ${ctx.session.difficulty}\n` +
-      `Bet $1 to $10\n` +
-      `Type amount (e.g., 5):`,
+      `🏆 ${ladderTier}: $${tierInfo.minBet}-$${tierInfo.maxBet}\n` +
+      `Type amount (e.g., ${tierInfo.minBet}):`,
       { reply_markup: { force_reply: true } }
     );
     betPromptMessageId = promptMsg.message_id;
@@ -536,8 +623,10 @@ export const pvcHandlers = (bot) => {
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
 
-    if (betAmount < MIN_BET || betAmount > MAX_BET) {
-      await ctx.replyWithMarkdown(`❌ **Invalid Bet**\nMust be $1 to $10!`);
+    const ladderTier = riskLadderProgress.get(user.telegramId)?.tier || 'bronze';
+    const tierInfo = RISK_LADDER_TIERS[ladderTier];
+    if (betAmount < tierInfo.minBet || betAmount > tierInfo.maxBet) {
+      await ctx.replyWithMarkdown(`❌ **Invalid Bet**\n${ladderTier} tier: $${tierInfo.minBet}-$${tierInfo.maxBet}!`);
       return;
     }
 
@@ -547,14 +636,13 @@ export const pvcHandlers = (bot) => {
     betPromptMessageId = null;
   });
 
-  bot.action(/powerup_(reroll|shield|boost)_(\d+\.?\d*)/, async (ctx) => {
+  bot.action(/powerup_boost_(\d+\.?\d*)/, async (ctx) => {
     await ctx.answerCbQuery();
-    const powerUp = ctx.match[1];
-    const betAmount = parseFloat(ctx.match[2]);
+    const betAmount = parseFloat(ctx.match[1]);
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
     
-    ctx.session.powerUp = powerUp;
+    ctx.session.powerUp = 'boost';
     const timeoutId = timeouts.get(user.telegramId);
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -587,7 +675,7 @@ export const pvcHandlers = (bot) => {
     const betAmount = parseFloat(ctx.match[1]);
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // 3s delay
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     await ctx.deleteMessage(ctx.callbackQuery.message.message_id).catch(() => {});
     await startPvCGame(ctx, user, betAmount);
   });
@@ -610,6 +698,13 @@ export const pvcHandlers = (bot) => {
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
     await doubleOrNothing(ctx, user, previousWin, gameId);
+  });
+
+  bot.action('switch_personality', async (ctx) => {
+    await ctx.answerCbQuery();
+    const user = await User.findOne({ telegramId: ctx.from.id });
+    if (!user) return ctx.replyWithMarkdown('❌ **Not Registered**\nUse /start to join!');
+    await switchBotPersonality(ctx, user);
   });
 
   bot.action('play_pvc', async (ctx) => {

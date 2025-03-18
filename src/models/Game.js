@@ -13,6 +13,7 @@ const GameSchema = new mongoose.Schema({
   difficulty: { type: String, enum: ['easy', 'normal', 'hard'], optional: true },
   powerUp: { type: String, enum: ['reroll', 'shield', 'boost'], optional: true },
   opponentPowerUp: { type: String, enum: ['reroll', 'shield', 'boost'], optional: true }, // For PvP
+  ladderTier: { type: String, enum: ['bronze', 'silver', 'gold'], default: 'bronze' },
   timestamp: { type: Date, default: Date.now },
 });
 
