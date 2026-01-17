@@ -52,7 +52,7 @@ This project is provided **as-is** for educational and experimental purposes. Th
 ### Installation:
 1. Clone the repository:  
    ```bash
-   git clone https://github.com/yourusername/dice-game-bot.git
+   git clone https://github.com/tamecalm/dice-game-bot.git
    cd dice-game-bot
 2. Install Dependencies
    ```bash
